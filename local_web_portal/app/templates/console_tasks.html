@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_text('Runs', 'Runs') }} | WriteClaw{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>{{ ui_text('Runs', 'Runs') }}</h1>
+  <p>{{ ui_text('Review current and past runs, then open the live WriteClaw execution detail.', 'Review current and past runs, then open the live WriteClaw execution detail.') }}</p>
+</section>
+<div class="page-actions">
+  <a href="/console/tasks" class="primary-btn secondary">{{ ui_text('Refresh Runs', 'Refresh Runs') }}</a>
+</div>
+<section class="list-page">
+  {% if jobs %}
+    {% for job in jobs %}
+    <article class="task-row-card vertical">
+      <div>
+        <h3>{{ job.idea[:60] }}{% if job.idea|length > 60 %}...{% endif %}</h3>
+        <div class="row-meta">provider: {{ job.provider }} | run_id: {{ job.run_id if job.run_id else '-' }}</div>
+        <div class="row-meta">status: {{ job.status }} | {{ ui_text('created', 'created') }}: {{ job.created_at.strftime("%Y/%m/%d %H:%M:%S") if job.created_at else '-' }}</div>
+      </div>
+      <div class="row-actions-inline">
+        <a href="/jobs/{{ job.id }}" class="mini-btn primary">{{ ui_text('Open', 'Open') }}</a>
+        <a href="/jobs/{{ job.id }}" class="mini-btn">{{ ui_text('Details', 'Details') }}</a>
+        <form method="post" action="/jobs/{{ job.id }}/delete" class="inline-form">
+          <button type="submit" class="mini-btn danger">{{ ui_text('Delete', 'Delete') }}</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  {% else %}
+  <div class="empty-panel">{{ ui_text('No runs yet.', 'No runs yet.') }}</div>
+  {% endif %}
+</section>
+{% endblock %}

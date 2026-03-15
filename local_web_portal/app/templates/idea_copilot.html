@@ -1,0 +1,151 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ ui_text('创意打磨', 'Idea Refinement') }} #{{ session_data.id }} | WriteClaw{% endblock %}
+{% block page_title %}{{ ui_text('创意打磨会话', 'Idea Refinement Session') }}{% endblock %}
+{% block page_subtitle %}{{ ui_text('把 AI 对话与创意打磨整合进同一个工作区。', 'Bring AI chat and idea refinement into one workspace.') }}{% endblock %}
+{% block content %}
+{% if message %}
+<div class="alert alert-ok">{{ message }}</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<div data-idea-copilot-root data-layout="detail" data-session-id="{{ session_data.id }}" data-reply-pending="{{ 'true' if session_state.reply_pending else 'false' }}" data-label-you="{{ ui_text('你', 'You') }}" data-label-thinking="{{ ui_text('正在思考', 'Thinking') }}" data-label-analysis-title="{{ ui_text('WriteClaw 分析', 'WriteClaw analysis') }}" data-label-next-questions="{{ ui_text('下一步问题', 'Next questions') }}" data-label-current-brief="{{ ui_text('当前写作简报', 'Current writing brief') }}" data-label-next-answers="{{ ui_text('建议下一步回答：', 'Suggested next answers:') }}" data-label-readiness="{{ ui_text('准备度', 'Readiness') }}" data-label-no-conversation="{{ ui_text('还没有对话记录。', 'No conversation yet.') }}">
+<div class="page-actions">
+  <a href="/console/chat?session_id={{ session_data.id }}" class="ghost-btn">{{ ui_text('Back to workspace', 'Back to workspace') }}</a>
+  <a href="/console/chat#new-session-form" class="primary-btn secondary">{{ ui_text('New conversation', 'New conversation') }}</a>
+  <form method="post" action="/idea-copilot/{{ session_data.id }}/delete" class="inline-form" onsubmit="return confirm('{{ ui_text('Delete this writing session? This cannot be undone.', 'Delete this writing session? This cannot be undone.') }}');">
+    <input type="hidden" name="next" value="/console/sessions">
+    <button type="submit" class="mini-btn danger">{{ ui_text('Delete conversation', 'Delete conversation') }}</button>
+  </form>
+</div>
+
+<section class="stats-grid">
+  <article class="stat-card">
+    <div class="stat-label">{{ ui_text('会话编号', 'Session ID') }}</div>
+    <div class="stat-value">#{{ session_data.id }}</div>
+    <div class="stat-meta">{{ provider_label }}</div>
+  </article>
+  <article class="stat-card">
+    <div class="stat-label">{{ ui_text('状态', 'Status') }}</div>
+    <div class="stat-value">{{ session_data.status }}</div>
+    <div class="stat-meta">{{ ui_text('最近更新时间', 'Last updated') }} {{ session_data.updated_at.strftime("%Y-%m-%d %H:%M") }}</div>
+  </article>
+  <article class="stat-card">
+    <div class="stat-label">{{ ui_text('轮次', 'Rounds') }}</div>
+    <div class="stat-value" data-round-count>{{ session_data.round_count }}</div>
+    <div class="stat-meta">{{ ui_text('已完成多轮创意梳理', 'Completed multiple refinement rounds') }}</div>
+  </article>
+  <article class="stat-card">
+    <div class="stat-label">{{ ui_text('更新时间', 'Last updated') }}</div>
+    <div class="stat-value" style="font-size:18px;">{{ session_data.updated_at.strftime("%m-%d %H:%M") }}</div>
+    <div class="stat-meta">{{ ui_text('最近一次修改', 'Most recent change') }}</div>
+  </article>
+</section>
+
+<section class="chat-layout">
+  <aside class="timeline-panel stack-md">
+    <div>
+      <h2>{{ ui_text('当前创意状态', 'Current Idea Status') }}</h2>
+      <p class="section-desc">{{ ui_text('左侧是会话摘要与控制，右侧是多轮对话流。', 'The left side shows the session summary and controls; the right side shows the multi-turn conversation.') }}</p>
+    </div>
+
+    <div>
+      <div class="stat-label">{{ ui_text('原始想法', 'Original Idea') }}</div>
+      <div class="soft-block" style="margin-top: 10px;">{{ session_data.original_idea }}</div>
+    </div>
+
+    <div>
+      <div class="section-header">
+        <h3>{{ ui_text('当前打磨稿', 'Current Refined Draft') }}</h3>
+        <span class="pill pill-{{ session_data.status }}">{{ session_data.status }}</span>
+      </div>
+      <div class="soft-block" data-refined-idea>{{ session_data.refined_idea if session_data.refined_idea else session_state.refined_idea }}</div>
+    </div>
+
+    <div class="panel-card" style="padding: 18px; background: var(--surface-2);">
+      <h3 style="margin-top: 0;">{{ ui_text('本轮 Claw 关注点', 'Current Claw Focus') }}</h3>
+      <div class="soft-text">{{ latest_turn.analysis }}</div>
+      {% if latest_turn.questions %}
+      <ol style="margin-top: 12px;">
+        {% for q in latest_turn.questions %}
+        <li>{{ q }}</li>
+        {% endfor %}
+      </ol>
+      {% endif %}
+    </div>
+
+    {% if session_data.status == "active" %}
+    <form method="post" action="/idea-copilot/{{ session_data.id }}/reply" class="form-stack" data-idea-reply-form>
+      <div data-idea-status class="console-alert" hidden></div>
+      <div>
+        <label>{{ ui_text('继续补充本轮信息', 'Add more details for this round') }}</label>
+        <textarea name="reply" rows="7" required placeholder="{{ ui_text('回答问题、补充风格与约束、指出不想要的套路、要求节奏或人物弧线……', 'Answer the questions, add style and constraints, call out clichés to avoid, or request pacing and character arcs...') }}"></textarea>
+      </div>
+      <button type="submit" class="btn btn-outline">{{ ui_text('提交并继续打磨', 'Submit and continue refining') }}</button>
+    </form>
+
+    <div class="row-actions">
+      <form method="post" action="/idea-copilot/{{ session_data.id }}/confirm">
+        <button type="submit" class="btn btn-primary">{{ ui_text('交给 WriteClaw 开始创作', 'Hand off to WriteClaw and start creating') }}</button>
+      </form>
+      <form method="post" action="/idea-copilot/{{ session_data.id }}/cancel" onsubmit="return confirm('{{ ui_text('确定取消这个创意打磨会话吗？', 'Are you sure you want to cancel this refinement session?') }}');">
+        <button type="submit" class="btn btn-outline">{{ ui_text('取消会话', 'Cancel session') }}</button>
+      </form>
+    </div>
+    {% else %}
+      {% if session_data.final_job_id %}
+      <a class="btn btn-primary" href="/console/chat?session_id={{ session_data.id }}">{{ ui_text('返回 WriteClaw 工作台', 'Back to WriteClaw workspace') }}</a>
+      {% else %}
+      <div class="soft-block">{{ ui_text('当前会话已结束。', 'This session has ended.') }}</div>
+      {% endif %}
+    {% endif %}
+  </aside>
+
+  <section class="chat-panel stack-md">
+    <div class="section-header">
+      <div>
+        <h2>{{ ui_text('对话流', 'Conversation') }}</h2>
+        <p class="section-desc">{{ ui_text('这里不是死板问答，而是围绕“缺什么、改什么、下一步做什么”的协同打磨。', 'This is not rigid Q&A. It is a collaborative loop around what is missing, what should change, and what comes next.') }}</p>
+      </div>
+      <a href="/dashboard#copilot" class="btn btn-outline btn-xs">{{ ui_text('返回会话列表', 'Back to sessions') }}</a>
+    </div>
+
+    <div class="chat-stream" data-idea-feed>
+      {% if messages %}
+        {% for msg in messages %}
+          {% if msg.role == "assistant" %}
+          <article class="chat-bubble chat-assistant">
+            <div class="chat-role">Claw / Copilot</div>
+            <div>{{ msg.analysis }}</div>
+            {% if msg.questions %}
+            <div class="soft-text" style="margin-top: 12px; font-weight: 700;">{{ ui_text('建议下一步回答：', 'Suggested next answers:') }}</div>
+            <ul style="margin-top: 8px;">
+              {% for q in msg.questions %}
+              <li>{{ q }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+            {% if msg.refined_idea %}
+            <div class="soft-block" style="margin-top: 14px;">{{ msg.refined_idea }}</div>
+            {% endif %}
+          </article>
+          {% elif msg.role == "user" %}
+          <article class="chat-bubble chat-user">
+            <div class="chat-role">{{ ui_text('你', 'You') }}</div>
+            <div>{{ msg.content }}</div>
+          </article>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+      <div class="soft-block">{{ ui_text('还没有对话记录。', 'No conversation yet.') }}</div>
+      {% endif %}
+    </div>
+  </section>
+</section>
+<script src="{{ url_for('static', path='idea_copilot_live.js') }}?v=20260311d"></script>
+<script>
+  window.initIdeaCopilotLive(document.querySelector('[data-idea-copilot-root][data-layout="detail"]'));
+</script>
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_text('风格指南', 'Style Guide') }} | WriteClaw{% endblock %}
+{% block content %}
+<div class="style-root">
+
+  <header class="style-header">
+    <div class="style-header-copy">
+      <div class="style-header-kicker">{{ ui_text('12 风格指南', '12 Style Guide') }}</div>
+      <h1>{{ ui_text('写作风格', 'Writing Style') }}</h1>
+      <p>{{ ui_text('Claw 当前的文风摘要、标签与开放性写作问题。修改后 Claw 将在下次运行时参考。', 'Current style summary, tags and open questions Claw uses when writing. Edits guide future runs.') }}</p>
+    </div>
+    <div class="style-header-stats">
+      <div class="style-stat-pill">
+        <span>{{ ui_text('风格标签', 'Style tags') }}</span>
+        <strong>{{ style_profile.tags|length }}</strong>
+      </div>
+      <div class="style-stat-pill">
+        <span>{{ ui_text('开放问题', 'Open Q') }}</span>
+        <strong>{{ style_profile.questions|length }}</strong>
+      </div>
+    </div>
+  </header>
+
+  <div class="style-body-grid">
+
+    <div class="style-summary-card">
+      <div class="style-card-head">
+        <h2>{{ ui_text('风格摘要', 'Style Summary') }}</h2>
+        <span class="style-card-badge">style_profile</span>
+      </div>
+      <div class="style-card-body">
+        {% if style_profile.summary %}
+        <div class="style-summary-text">{{ style_profile.summary }}</div>
+        {% else %}
+        <div class="style-empty-note">
+          {{ ui_text('还没有风格摘要。等 Claw 写了几章之后会自动生成。', 'No style summary yet. Claw will generate one after writing a few chapters.') }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="display:grid;gap:20px;">
+
+      <div class="style-tags-card">
+        <div class="style-card-head">
+          <h2>{{ ui_text('风格标签', 'Style Tags') }}</h2>
+          <span class="style-card-badge">{{ style_profile.tags|length }}</span>
+        </div>
+        <div class="style-card-body">
+          {% if style_profile.tags %}
+          <div class="style-tags-wrap">
+            {% for tag in style_profile.tags %}
+            <span class="style-tag-chip">{{ tag }}</span>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="style-empty-note">{{ ui_text('暂无风格标签。', 'No style tags yet.') }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="style-tags-card">
+        <div class="style-card-head">
+          <h2>{{ ui_text('开放性写作问题', 'Open Questions') }}</h2>
+          <span class="style-card-badge">{{ style_profile.questions|length }}</span>
+        </div>
+        <div class="style-card-body">
+          {% if style_profile.questions %}
+          <ol class="style-questions-list">
+            {% for q in style_profile.questions %}
+            <li>{{ q }}</li>
+            {% endfor %}
+          </ol>
+          {% else %}
+          <div class="style-empty-note">{{ ui_text('当前没有开放性写作问题。', 'No open writing questions right now.') }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

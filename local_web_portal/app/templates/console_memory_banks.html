@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_text('记忆库', 'Banks') }} | WriteClaw{% endblock %}
+{% block content %}
+<div class="ws-root" data-workspace-root data-run-id="{{ story_assets.latest_run_id }}" data-workspace-default-mode="memory">
+  <header class="ws-shell-head">
+    <div class="ws-shell-copy">
+      <div class="ws-shell-kicker">{{ ui_text('06 记忆库', '06 Banks') }}</div>
+      <h1>{{ ui_text('记忆库', 'Banks') }}</h1>
+      <div class="ws-shell-meta">
+        <span>{{ ui_text('项目', 'Project') }}: {{ story_assets.project_name or '-' }}</span>
+        <span>{{ ui_text('运行 ID', 'Run ID') }}: {{ story_assets.latest_run_id or '-' }}</span>
+      </div>
+    </div>
+    <div class="ws-shell-stats">
+      <div class="ws-shell-stat"><span>{{ ui_text('记忆', 'Memory') }}</span><strong>{{ status_summary.memory_count }}</strong></div>
+      <div class="ws-shell-stat"><span>{{ ui_text('角色', 'Characters') }}</span><strong>{{ status_summary.characters }}</strong></div>
+      <div class="ws-shell-stat"><span>{{ ui_text('世界事实', 'World facts') }}</span><strong>{{ status_summary.world_facts }}</strong></div>
+      <div class="ws-shell-stat"><span>{{ ui_text('情节点', 'Plot beats') }}</span><strong>{{ status_summary.plot_points }}</strong></div>
+    </div>
+  </header>
+
+  <section class="ws-panel ws-panel-memory is-active" data-workspace-panel="memory">
+    <div class="ws-memory-shell ws-memory-shell-v2 ws-memory-shell-v2--tabs">
+      <section class="ws-card-panel ws-memory-zones ws-memory-zones--tabbar">
+        <div class="ws-memory-zones-topbar">
+          <span class="ws-memory-zones-label">{{ ui_text('分区', 'Zones') }}</span>
+          <div id="memory-group-list" class="memory-group-list ws-group-list"></div>
+          <button type="button" class="ws-btn ws-btn-xs" id="memory-refresh-btn">{{ ui_text('刷新', 'Refresh') }}</button>
+        </div>
+        <p id="memory-active-zone-desc" class="ws-section-desc ws-memory-zone-desc-bar"></p>
+      </section>
+
+      <section class="ws-card-panel mem-banks-content">
+        <div class="mem-banks-zone-info">
+          <span class="mem-banks-zone-title" id="memory-bank-group-title"></span>
+          <span class="mem-banks-zone-count"><strong id="memory-active-zone-count">0</strong> {{ ui_text('个 bank', 'banks') }} · <span id="memory-structure-layer">-</span></span>
+          <p id="memory-bank-group-desc" class="mem-banks-zone-subdesc"></p>
+        </div>
+        <div id="memory-bank-detail-list" class="mem-bank-detail-grid ws-bank-detail-list"></div>
+        <div aria-hidden="true" style="display:none">
+          <span id="memory-active-bank-name"></span>
+          <span id="memory-active-bank-desc"></span>
+          <strong id="memory-active-bank-count">0</strong>
+          <span id="memory-latest-topic"></span>
+          <div id="memory-bank-grid"></div>
+          <span id="memory-taxonomy-title"></span>
+          <span id="memory-taxonomy-desc"></span>
+          <span id="memory-taxonomy-bank-count">0</span>
+        </div>
+      </section>
+    </div>
+  </section>
+</div>
+
+<script id="workspace-bootstrap" type="application/json">
+  {{ {
+    "ui": {
+      "chapterLabel": ui_text('章节', 'Chapter'),
+      "pageLabel": ui_text('页', 'Page'),
+      "iterationLabel": ui_text('迭代', 'Iteration'),
+      "charsLabel": ui_text('字数', 'Chars'),
+      "noChapters": ui_text('还没有章节产出。', 'No chapter output yet.'),
+      "noEntries": ui_text('这个 bank 里还没有条目。', 'No entries in this bank.'),
+      "selectEntry": ui_text('先选择一个条目。', 'Select an entry first.'),
+      "saving": ui_text('保存中...', 'Saving...'),
+      "saved": ui_text('已保存', 'Saved'),
+      "refreshed": ui_text('已刷新', 'Refreshed'),
+      "refreshFailed": ui_text('刷新失败', 'Refresh failed'),
+      "saveFailed": ui_text('保存失败', 'Save failed'),
+      "addFailed": ui_text('请先输入内容', 'Enter content first'),
+      "topicPlaceholder": ui_text('主题', 'Topic'),
+      "emptySnippet": ui_text('暂无内容', 'No content'),
+      "untitledBank": ui_text('未命名 Bank', 'Untitled Bank'),
+      "memoryEntries": ui_text('条目', 'entries'),
+      "activeZone": ui_text('当前分区', 'Active zone'),
+      "activeBank": ui_text('当前 Bank', 'Active bank'),
+      "bankCountLabel": ui_text('banks', 'banks'),
+      "entryCountLabel": ui_text('条目', 'entries'),
+      "latestWrite": ui_text('最新写入', 'Latest write'),
+      "waitingSelection": ui_text('等待选择', 'Waiting for selection'),
+      "waitingZoneSelection": ui_text('选择分区', 'Select a zone'),
+      "taxonomyEmpty": ui_text('还没有细分结构。', 'No structure yet.'),
+      "noBankSelected": ui_text('选择一个 bank 后显示详情。', 'Pick a bank to view details.'),
+      "zoneEmpty": ui_text('还没有分区。', 'No zones yet.'),
+      "structurePremise": ui_text('前提层', 'Premise layer'),
+      "structureAuthorBrief": ui_text('作者简报层', 'Author brief layer'),
+      "structureChapterPlanning": ui_text('章节规划层', 'Chapter planning layer'),
+      "structureRevisionLoop": ui_text('修订循环层', 'Revision loop layer'),
+      "structureCanonState": ui_text('设定状态层', 'Canon state layer'),
+      "structureRuntime": ui_text('运行时层', 'Runtime layer'),
+      "futureExpansion": ui_text('可继续扩展', 'Ready for expansion')
+    },
+    "data": workspace_bootstrap
+  }|tojson }}
+</script>
+<script src="{{ url_for('static', path='workspace_v2.js') }}?v=20260315b"></script>
+{% endblock %}

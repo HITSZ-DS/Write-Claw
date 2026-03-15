@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_text('工作台', 'Workspace') }} | WriteClaw{% endblock %}
+{% block content %}
+{% set session_suffix = '?session_id=' ~ active_session.id if active_session else '' %}
+
+<div class="ws-root" data-workspace-root data-run-id="{{ story_assets.latest_run_id }}">
+  <header class="ws-shell-head ws-shell-head--studio">
+    <div class="ws-shell-copy">
+      <div class="ws-shell-kicker">{{ ui_text('创作台', 'Studio') }}</div>
+      <h1>{{ story_assets.project_name or ui_text('当前项目', 'Current project') }}</h1>
+      <p class="ws-shell-note">{{ ui_text('正文、规划和记忆放在同一个创作台里处理，减少来回切页。', 'Draft, planning, and memory live on the same creative surface so you do not keep context-switching.') }}</p>
+      <div class="ws-shell-meta">
+        <span>{{ ui_text('运行 ID', 'Run ID') }}: {{ story_assets.latest_run_id or '-' }}</span>
+        <span>{{ ui_text('会话', 'Session') }}: {{ status_summary.session_label }}</span>
+      </div>
+      <div class="ws-shell-actions">
+        <a class="ghost-btn" href="/console/chat{{ session_suffix }}">{{ ui_text('返回对话', 'Back to chat') }}</a>
+        <a class="ghost-btn" href="/console/storyboard{{ session_suffix }}">{{ ui_text('故事板', 'Storyboard') }}</a>
+        <a class="ghost-btn" href="/console/style{{ session_suffix }}">{{ ui_text('风格', 'Style') }}</a>
+      </div>
+    </div>
+    <div class="ws-shell-stats">
+      <div class="ws-shell-stat">
+        <span>{{ ui_text('章节', 'Chapters') }}</span>
+        <strong>{{ story_assets.chapter_outputs|length }}</strong>
+      </div>
+      <div class="ws-shell-stat">
+        <span>{{ ui_text('大纲', 'Outlines') }}</span>
+        <strong>{{ story_assets.outlines|length }}</strong>
+      </div>
+      <div class="ws-shell-stat">
+        <span>{{ ui_text('情节点', 'Plot beats') }}</span>
+        <strong>{{ story_assets.plot_points|length }}</strong>
+      </div>
+      <div class="ws-shell-stat">
+        <span>{{ ui_text('记忆', 'Memory') }}</span>
+        <strong>{{ status_summary.memory_count }}</strong>
+      </div>
+    </div>
+  </header>
+
+  <div class="ws-topbar">
+    <div class="ws-topbar-left">
+      <div class="ws-tabs" data-workspace-mode-switch>
+        <button class="ws-tab is-active" type="button" data-workspace-mode-btn="manuscript">
+          {{ ui_text('稿件', 'Manuscript') }}
+          <span class="ws-tab-count">{{ story_assets.chapter_outputs|length }}</span>
+        </button>
+        <button class="ws-tab" type="button" data-workspace-mode-btn="memory">
+          {{ ui_text('记忆', 'Memory') }}
+          <span class="ws-tab-count">{{ status_summary.memory_count }}</span>
+        </button>
+      </div>
+    </div>
+    <div class="ws-topbar-right">
+      {% if story_assets.latest_run_id %}
+      <span class="ws-run-pill">{{ story_assets.latest_run_id }}</span>
+      {% endif %}
+      <span class="ws-topbar-note">{{ ui_text('把读稿、改稿、记忆操作压缩到一个工作台。', 'Read, edit, and memory operations stay compressed into one workspace.') }}</span>
+    </div>
+  </div>
+
+  <section class="ws-panel ws-panel-manuscript is-active" data-workspace-panel="manuscript">
+    <div class="ws-manuscript-shell ws-manuscript-shell-v2">
+      <aside class="ws-card-panel ws-manuscript-rail">
+        <div class="ws-section-head">
+          <div>
+            <div class="ws-section-kicker">{{ ui_text('导航', 'Navigator') }}</div>
+            <h2 id="chapter-rail-title">{{ ui_text('章节轨道', 'Chapter rail') }}</h2>
+          </div>
+          <span class="ws-count" id="chapter-rail-count">{{ story_assets.chapter_outputs|length }}</span>
+        </div>
+        <div id="chapter-rail" class="chapter-rail ws-rail"></div>
+        {% if not story_assets.chapter_outputs %}
+        <div class="ws-empty-note">{{ ui_text('还没有章节产出，先在对话页启动写作。', 'No chapter output yet. Start the writing run from chat first.') }}</div>
+        {% endif %}
+      </aside>
+
+      <div class="ws-manuscript-main">
+        <section class="ws-card-panel ws-reader-stage ws-reader-stage-v2">
+          <div id="manuscript-reader-shell"{% if not story_assets.chapter_outputs %} class="hidden"{% endif %}>
+            <div class="ws-reader-toolbar">
+              <div class="ws-reader-toolbar-left">
+                <div class="ws-btn-group">
+                  <button type="button" class="ws-btn" id="prev-chapter-btn">{{ ui_text('上一章', 'Prev chapter') }}</button>
+                  <button type="button" class="ws-btn" id="next-chapter-btn">{{ ui_text('下一章', 'Next chapter') }}</button>
+                </div>
+                <span class="ws-reader-meta" id="manuscript-reader-indicator"></span>
+                <span class="ws-reader-meta" id="manuscript-chapter-kicker"></span>
+              </div>
+              <div class="ws-reader-toolbar-right">
+                <div class="ws-btn-group">
+                  <button type="button" class="ws-btn" id="prev-page-btn">{{ ui_text('上一页', 'Prev page') }}</button>
+                  <span class="ws-reader-meta" id="manuscript-page-kicker">p1</span>
+                  <button type="button" class="ws-btn" id="next-page-btn">{{ ui_text('下一页', 'Next page') }}</button>
+                </div>
+                <span class="ws-word-chip" id="manuscript-word-count"></span>
+              </div>
+            </div>
+            <div class="ws-paper">
+              <h3 class="ws-paper-title" id="manuscript-title"></h3>
+              <div class="ws-paper-body" id="manuscript-page-body"></div>
+            </div>
+            <div class="ws-reader-footer">
+              <span id="manuscript-footer-meta" class="ws-muted"></span>
+              <a id="manuscript-download-link" class="ws-link" href="#">{{ ui_text('下载章节', 'Download chapter') }}</a>
+            </div>
+          </div>
+
+          <div id="manuscript-planning-shell"{% if story_assets.chapter_outputs %} class="hidden"{% endif %}>
+            <div class="ws-paper">
+              <div class="ws-paper-kicker">
+                <span id="planning-kicker">{{ ui_text('当前规划', 'Planning') }}</span>
+                <span id="planning-page-kicker">{{ ui_text('规划模式', 'Planning mode') }}</span>
+                <span id="planning-source-chip" class="ws-word-chip">-</span>
+              </div>
+              <h3 class="ws-paper-title" id="planning-title">{{ ui_text('等待正文生成', 'Waiting for draft') }}</h3>
+              <div class="ws-paper-body ws-paper-body-muted" id="planning-body">{{ ui_text('当前还没有正文，先展示规划包与章节简报。', 'No draft yet. Planning materials and chapter briefs will show here first.') }}</div>
+            </div>
+          </div>
+
+          <div id="manuscript-empty"{% if story_assets.chapter_outputs %} class="hidden"{% endif %}></div>
+        </section>
+
+        <section class="ws-editor-grid ws-editor-grid-v2">
+          <div class="ws-editor-column">
+            <details class="ws-accordion-item" open>
+              <summary class="ws-accordion-head">
+                <span>{{ ui_text('正文编辑', 'Draft editor') }}</span>
+                <span class="ws-badge" id="manuscript-edit-draft-badge">{{ ui_text('可编辑', 'Editable') if story_assets.chapter_outputs else ui_text('空', 'Empty') }}</span>
+              </summary>
+              <form id="manuscript-draft-form" class="ws-form">
+                <textarea id="manuscript-draft-content" rows="14" placeholder="{{ ui_text('选择章节后开始编辑正文', 'Select a chapter to edit the draft') }}"></textarea>
+                <button type="submit" class="ws-btn ws-btn-primary" id="manuscript-draft-save">{{ ui_text('保存正文', 'Save draft') }}</button>
+              </form>
+            </details>
+
+            <details class="ws-accordion-item">
+              <summary class="ws-accordion-head">
+                <span>{{ ui_text('章节 Brief', 'Chapter brief') }}</span>
+                <span class="ws-badge" id="manuscript-edit-brief-badge">{{ ui_text('实时', 'Live') }}</span>
+              </summary>
+              <form id="manuscript-brief-form" class="ws-form">
+                <input type="hidden" id="manuscript-brief-id">
+                <input type="text" id="manuscript-brief-topic" placeholder="{{ ui_text('主题', 'Topic') }}">
+                <textarea id="manuscript-brief-content" rows="10" placeholder="{{ ui_text('编辑章节 brief', 'Edit the chapter brief') }}"></textarea>
+                <button type="submit" class="ws-btn ws-btn-primary" id="manuscript-brief-save">{{ ui_text('保存 Brief', 'Save brief') }}</button>
+              </form>
+            </details>
+          </div>
+
+          <div class="ws-editor-column">
+            <details class="ws-accordion-item">
+              <summary class="ws-accordion-head">
+                <span>{{ ui_text('大纲编辑', 'Outline editor') }}</span>
+                <span class="ws-badge" id="manuscript-edit-outline-badge">{{ ui_text('已载入', 'Loaded') if story_assets.outlines else ui_text('空', 'Empty') }}</span>
+              </summary>
+              <form id="manuscript-outline-form" class="ws-form">
+                <input type="text" id="manuscript-outline-title" placeholder="{{ ui_text('标题', 'Title') }}">
+                <textarea id="manuscript-outline-content" rows="10" placeholder="{{ ui_text('编辑当前章节或全局大纲', 'Edit the current chapter or global outline') }}"></textarea>
+                <button type="submit" class="ws-btn ws-btn-primary" id="manuscript-outline-save">{{ ui_text('保存大纲', 'Save outline') }}</button>
+              </form>
+            </details>
+
+            <details class="ws-accordion-item">
+              <summary class="ws-accordion-head">
+                <span>{{ ui_text('规划资料', 'Planning packet') }}</span>
+                <span class="ws-badge">{{ ui_text('实时', 'Live') }}</span>
+              </summary>
+              <div class="ws-form">
+                <div class="ws-planning-counts">
+                  <span class="ws-subcount-chip">{{ ui_text('简报', 'Briefs') }} <strong id="manuscript-brief-count">0</strong></span>
+                  <span class="ws-subcount-chip">{{ ui_text('大纲', 'Outlines') }} <strong id="manuscript-outline-count">0</strong></span>
+                  <span class="ws-subcount-chip">{{ ui_text('场景', 'Scenes') }} <strong id="manuscript-beat-count">0</strong></span>
+                </div>
+                <div id="manuscript-brief-list" class="ws-card-list"></div>
+                <div id="manuscript-outline-list" class="ws-card-list"></div>
+                <div id="manuscript-beat-list" class="ws-card-list"></div>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <div id="manuscript-editor-status" class="ws-status-line"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ws-panel ws-panel-memory" data-workspace-panel="memory">
+    <div class="ws-memory-shell ws-memory-shell-v2">
+      <section class="ws-card-panel ws-memory-zones">
+        <div class="ws-section-head">
+          <div>
+            <div class="ws-section-kicker">{{ ui_text('分区', 'Zones') }}</div>
+            <h2 id="memory-active-zone-name">{{ ui_text('选择分区', 'Pick a zone') }}</h2>
+            <p id="memory-active-zone-desc" class="ws-section-desc"></p>
+          </div>
+          <button type="button" class="ws-btn ws-btn-xs" id="memory-refresh-btn">{{ ui_text('刷新', 'Refresh') }}</button>
+        </div>
+        <div id="memory-group-list" class="memory-group-list ws-group-list"></div>
+      </section>
+
+      <section class="ws-card-panel ws-memory-context">
+        <div class="ws-memory-summary-head">
+          <div>
+            <div class="ws-section-kicker">{{ ui_text('当前 Bank', 'Active bank') }}</div>
+            <h2 id="memory-active-bank-name">{{ ui_text('等待选择', 'Waiting for selection') }}</h2>
+            <p id="memory-active-bank-desc" class="ws-section-desc"></p>
+          </div>
+          <div class="ws-memory-summary-meta">
+            <div class="ws-pill-stat">
+              <small>{{ ui_text('条目', 'Entries') }}</small>
+              <strong id="memory-active-bank-count">0</strong>
+            </div>
+            <div class="ws-pill-stat">
+              <small>{{ ui_text('层级', 'Layer') }}</small>
+              <strong id="memory-structure-layer">-</strong>
+            </div>
+            <div class="ws-pill-stat">
+              <small>{{ ui_text('Banks', 'Banks') }}</small>
+              <strong id="memory-active-zone-count">0</strong>
+            </div>
+          </div>
+        </div>
+        <div class="ws-memory-latest" id="memory-latest-topic">-</div>
+
+        <div class="ws-memory-context-grid">
+          <div class="ws-memory-context-card">
+            <div class="ws-memory-block-head">
+              <span id="memory-bank-group-title">{{ ui_text('Banks', 'Banks') }}</span>
+            </div>
+            <div id="memory-bank-group-desc" class="ws-side-note"></div>
+            <div id="memory-bank-grid" class="memory-bank-grid ws-bank-grid"></div>
+          </div>
+
+          <div class="ws-memory-context-card">
+            <div class="ws-memory-block-head">
+              <span id="memory-taxonomy-title">{{ ui_text('Bank 结构', 'Bank structure') }}</span>
+              <span class="ws-count" id="memory-taxonomy-bank-count">0</span>
+            </div>
+            <div id="memory-taxonomy-desc" class="ws-section-desc"></div>
+            <div id="memory-bank-detail-list" class="ws-bank-detail-list"></div>
+          </div>
+        </div>
+      </section>
+
+      {% if story_assets.latest_run_id %}
+      <div class="ws-memory-workbench">
+        <section class="ws-card-panel ws-memory-intake">
+          <div class="ws-section-head">
+            <div>
+              <div class="ws-section-kicker">{{ ui_text('新增', 'Create') }}</div>
+              <h3>{{ ui_text('写入记忆', 'Add memory') }}</h3>
+            </div>
+          </div>
+          <form id="memory-add-form" class="ws-form">
+            <input type="text" id="memory-add-topic" placeholder="{{ ui_text('Topic（可选）', 'Topic (optional)') }}">
+            <textarea id="memory-add-content" rows="5" placeholder="{{ ui_text('输入要追加到当前 Bank 的内容', 'Add content to the current bank') }}"></textarea>
+            <button type="submit" class="ws-btn ws-btn-primary">{{ ui_text('写入', 'Add') }}</button>
+          </form>
+        </section>
+
+        <section class="ws-card-panel ws-memory-list-card">
+          <div class="ws-section-head">
+            <div>
+              <div class="ws-section-kicker">{{ ui_text('列表', 'List') }}</div>
+              <h3>{{ ui_text('最近条目', 'Recent entries') }}</h3>
+            </div>
+            <span class="ws-count" id="memory-editor-count">0</span>
+          </div>
+          <div id="memory-entry-list" class="memory-entry-list ws-entry-list"></div>
+        </section>
+
+        <section class="ws-card-panel ws-memory-editor-card">
+          <div class="ws-section-head">
+            <div>
+              <div class="ws-section-kicker">{{ ui_text('编辑', 'Edit') }}</div>
+              <h3 id="memory-editor-title">{{ ui_text('条目编辑器', 'Entry editor') }}</h3>
+              <p id="memory-editor-desc" class="ws-section-desc"></p>
+            </div>
+          </div>
+          <form id="memory-edit-form" class="ws-form">
+            <input type="hidden" id="memory-edit-id">
+            <input type="text" id="memory-edit-topic" placeholder="{{ ui_text('Topic', 'Topic') }}">
+            <textarea id="memory-edit-content" rows="12" placeholder="{{ ui_text('选择一个条目后在这里编辑', 'Select an entry and edit it here') }}"></textarea>
+            <button type="submit" class="ws-btn ws-btn-primary" id="memory-edit-submit">{{ ui_text('保存', 'Save') }}</button>
+          </form>
+          <div id="memory-editor-status" class="ws-status-line"></div>
+        </section>
+      </div>
+      {% else %}
+      <section class="ws-card-panel ws-empty-panel">
+        <div class="ws-empty-note">{{ ui_text('先在对话页启动一次正式写作，之后这里会加载稿件与记忆。', 'Start a writing run from chat first. Manuscript and memory tools will appear here afterward.') }}</div>
+      </section>
+      {% endif %}
+    </div>
+  </section>
+</div>
+
+<script id="workspace-bootstrap" type="application/json">
+  {{ {
+    "ui": {
+      "chapterLabel": ui_text('章节', 'Chapter'),
+      "pageLabel": ui_text('页', 'Page'),
+      "iterationLabel": ui_text('迭代', 'Iteration'),
+      "charsLabel": ui_text('字数', 'Chars'),
+      "noChapters": ui_text('还没有章节产出。', 'No chapter output yet.'),
+      "noEntries": ui_text('这个 bank 还没有条目。', 'No entries in this bank.'),
+      "selectEntry": ui_text('先选择一个条目。', 'Select an entry first.'),
+      "saving": ui_text('保存中...', 'Saving...'),
+      "saved": ui_text('已保存', 'Saved'),
+      "refreshed": ui_text('已刷新', 'Refreshed'),
+      "refreshFailed": ui_text('刷新失败', 'Refresh failed'),
+      "saveFailed": ui_text('保存失败', 'Save failed'),
+      "addFailed": ui_text('请先输入内容', 'Enter content first'),
+      "topicPlaceholder": ui_text('Topic', 'Topic'),
+      "emptySnippet": ui_text('暂无内容', 'No content'),
+      "untitledBank": ui_text('未命名 Bank', 'Untitled Bank'),
+      "draftReady": ui_text('正文已生成', 'Draft ready'),
+      "planningOnly": ui_text('仅有规划', 'Planning only'),
+      "globalOutline": ui_text('全局大纲', 'Global outline'),
+      "chapterOutline": ui_text('章节大纲', 'Chapter outline'),
+      "chapterBrief": ui_text('章节 Brief', 'Chapter brief'),
+      "sceneCard": ui_text('场景卡', 'Scene card'),
+      "memoryEntries": ui_text('条目', 'entries'),
+      "planningSummary": ui_text('当前暂无正文，展示规划包。', 'No draft yet. Showing planning materials.'),
+      "draftEditorEmpty": ui_text('当前没有可编辑正文。', 'No draft to edit yet.'),
+      "outlineEditorEmpty": ui_text('当前没有可编辑大纲。', 'No outline to edit yet.'),
+      "briefEditorEmpty": ui_text('当前没有可编辑 brief。', 'No chapter brief to edit yet.'),
+      "saveCurrentChapter": ui_text('保存章节', 'Save chapter'),
+      "saveOutline": ui_text('保存大纲', 'Save outline'),
+      "saveBrief": ui_text('保存 Brief', 'Save brief'),
+      "draftSaved": ui_text('章节正文已保存。', 'Chapter draft saved.'),
+      "outlineSaved": ui_text('大纲已保存。', 'Outline saved.'),
+      "briefSaved": ui_text('章节 brief 已保存。', 'Chapter brief saved.'),
+      "activeZone": ui_text('当前分区', 'Active zone'),
+      "activeBank": ui_text('当前 Bank', 'Active bank'),
+      "bankCountLabel": ui_text('banks', 'banks'),
+      "entryCountLabel": ui_text('条目', 'entries'),
+      "latestWrite": ui_text('最新写入', 'Latest write'),
+      "waitingSelection": ui_text('等待选择', 'Waiting for selection'),
+      "waitingZoneSelection": ui_text('选择分区', 'Select a zone'),
+      "taxonomyEmpty": ui_text('还没有细分结构。', 'No structure yet.'),
+      "noBankSelected": ui_text('选择一个 bank 后显示详情。', 'Pick a bank to view details.'),
+      "zoneEmpty": ui_text('还没有分区。', 'No zones yet.'),
+      "structurePremise": ui_text('前提层', 'Premise layer'),
+      "structureAuthorBrief": ui_text('作者简报层', 'Author brief layer'),
+      "structureChapterPlanning": ui_text('章节规划层', 'Chapter planning layer'),
+      "structureRevisionLoop": ui_text('修订循环层', 'Revision loop layer'),
+      "structureCanonState": ui_text('设定状态层', 'Canon state layer'),
+      "structureRuntime": ui_text('运行时层', 'Runtime layer'),
+      "futureExpansion": ui_text('可继续扩展', 'Ready for expansion')
+    },
+    "data": workspace_bootstrap
+  }|tojson }}
+</script>
+<script src="{{ url_for('static', path='workspace_v2.js') }}?v=20260315b"></script>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_text('故事板', 'Storyboard') }} | WriteClaw{% endblock %}
+{% block content %}
+<div class="pg-root pg-root-fluid storyboard-page">
+  <div class="world-header">
+    <div>
+      <div class="world-header-kicker">{{ ui_text('05 故事板', '05 Storyboard') }}</div>
+      <h1>{{ ui_text('故事结构', 'Story Structure') }}</h1>
+      <p>{{ ui_text('大纲、情节点与章节进度总览。Claw 每次写作都会更新这里。', 'Outline, plot beats, and chapter progress. Claw updates this every run.') }}</p>
+    </div>
+    <div class="world-header-actions">
+      <a class="btn btn-primary btn-xs" href="/console/manuscript/read{% if active_session %}?session_id={{ active_session.id }}{% endif %}">{{ ui_text('阅读', 'Read') }}</a>
+      <a class="btn btn-outline btn-xs" href="/console/chat{% if active_session %}?session_id={{ active_session.id }}{% endif %}">{{ ui_text('返回对话', 'Back to chat') }}</a>
+    </div>
+  </div>
+
+  <div class="pg-stats pg-stats-fluid">
+    <div class="pg-stat">
+      <span class="pg-stat-label">{{ ui_text('大纲', 'Outlines') }}</span>
+      <span class="pg-stat-value {% if storyboard_view.outlines %}ok{% endif %}">{{ storyboard_view.outlines|length }}</span>
+    </div>
+    <div class="pg-stat">
+      <span class="pg-stat-label">{{ ui_text('情节点', 'Beats') }}</span>
+      <span class="pg-stat-value {% if storyboard_view.plot_points %}ok{% endif %}">{{ storyboard_view.plot_points|length }}</span>
+    </div>
+    <div class="pg-stat">
+      <span class="pg-stat-label">{{ ui_text('章节', 'Chapters') }}</span>
+      <span class="pg-stat-value {% if storyboard_view.chapter_outputs %}ok{% endif %}">{{ storyboard_view.chapter_outputs|length }}</span>
+    </div>
+    <div class="pg-stat">
+      <span class="pg-stat-label">{{ ui_text('项目', 'Project') }}</span>
+      <span class="pg-stat-value pg-stat-value-project">{{ story_assets.project_name or '-' }}</span>
+    </div>
+  </div>
+
+  <div class="sb-grid sb-grid-fluid">
+    <div class="sb-main-column">
+      <div class="pg-card">
+        <div class="pg-card-head">
+          <span class="pg-card-title">{{ ui_text('大纲', 'Outline') }}</span>
+          <span class="pg-card-badge {% if storyboard_view.outlines %}ok{% endif %}">{{ storyboard_view.outlines|length }}</span>
+        </div>
+        <div class="pg-card-body">
+          {% for item in storyboard_view.outlines %}
+          <div class="sb-outline-card sb-outline-card-{{ item.bucket }}">
+            <div class="sb-chip">{{ item.chip }}</div>
+            <div class="sb-outline-title">{{ item.title }}</div>
+            {% if item.meta %}<div class="sb-outline-meta">{{ item.meta | join(' · ') }}</div>{% endif %}
+            <div class="sb-outline-summary">{{ item.summary }}</div>
+            {% if item.detail and item.detail != item.summary %}
+            <details class="pg-raw-toggle">
+              <summary>{{ ui_text('展开', 'Expand') }}</summary>
+              <div class="pg-raw-body">{{ item.detail }}</div>
+            </details>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="pg-empty">{{ ui_text('等待 Claw 完成规划后显示大纲。', 'Outlines appear after Claw finishes plotting.') }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if storyboard_view.chapter_outputs %}
+      <div class="pg-card sb-secondary-card">
+        <div class="pg-card-head">
+          <span class="pg-card-title">{{ ui_text('已落盘章节', 'Persisted chapters') }}</span>
+          <span class="pg-card-badge ok">{{ storyboard_view.chapter_outputs|length }}</span>
+        </div>
+        <div class="pg-card-body">
+          <div class="sb-chapter-grid">
+            {% for item in storyboard_view.chapter_outputs %}
+            <div class="sb-chapter-card">
+              <div class="sb-chapter-title">{{ item.title }}</div>
+              <div class="sb-chapter-meta">{{ item.filename }}{% if item.iteration %} · {{ ui_text('迭代', 'Iter') }} {{ item.iteration }}{% endif %}</div>
+              <div class="sb-chapter-summary">{{ item.summary }}</div>
+              {% if item.detail and item.detail != item.summary %}
+              <details class="pg-raw-toggle">
+                <summary>{{ ui_text('展开', 'Expand') }}</summary>
+                <div class="pg-raw-body">{{ item.detail }}</div>
+              </details>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="sb-side-column">
+      <div class="pg-card">
+        <div class="pg-card-head">
+          <span class="pg-card-title">{{ ui_text('情节点', 'Plot beats') }}</span>
+          <span class="pg-card-badge {% if storyboard_view.plot_points %}ok{% endif %}">{{ storyboard_view.plot_points|length }}</span>
+        </div>
+        <div class="pg-card-body">
+          {% for item in storyboard_view.plot_points %}
+          <div class="sb-beat-item">
+            <span class="sb-beat-num">{{ '%02d'|format(item['index']) }}</span>
+            <div>
+              <div class="sb-beat-title">{{ item.title }}</div>
+              {% if item.timestamp %}<div class="sb-beat-meta">{{ item.timestamp }}</div>{% endif %}
+              <div class="sb-beat-summary">{{ item.summary }}</div>
+              {% if item.detail and item.detail != item.summary %}
+              <details class="pg-raw-toggle">
+                <summary>{{ ui_text('展开', 'Expand') }}</summary>
+                <div class="pg-raw-body">{{ item.detail }}</div>
+              </details>
+              {% endif %}
+            </div>
+          </div>
+          {% else %}
+          <div class="pg-empty">{{ ui_text('暂无情节点。', 'No plot beats yet.') }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="pg-card sb-secondary-card">
+        <div class="pg-card-head">
+          <span class="pg-card-title">{{ ui_text('记忆库', 'Memory banks') }}</span>
+        </div>
+        <div class="pg-card-body">
+          <div class="mem-bank-strip mem-bank-strip-fluid">
+            {% for slug in ['task_briefs', 'chapter_briefs', 'scene_cards', 'decision_log', 'revision_notes'] %}
+            {% set n = memory_overview.claw_counts.get(slug, 0) if memory_overview.claw_counts else 0 %}
+            <div class="mem-bank-chip {% if n %}has-data{% endif %}">
+              <code>{{ slug }}</code>
+              <strong>{{ n }}</strong>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

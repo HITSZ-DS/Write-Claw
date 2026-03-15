@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_text('环境设置', 'Environment Settings') }} | WriteClaw{% endblock %}
+{% block content %}
+
+{% set ev = env_form_values %}
+
+<section class="page-head">
+  <h1>{{ ui_text('环境设置', 'Environment Settings') }}</h1>
+  <p>{{ ui_text('调整 Claw 的运行参数、生成策略与系统行为。修改后立即生效，同时持久化到 .env 文件。', 'Tune Claw runtime parameters, generation strategy, and system behavior. Changes take effect immediately and persist to .env.') }}</p>
+</section>
+
+{% if message %}<div class="alert alert-ok">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+<form method="post" action="/console/env/save" class="env-settings-form" id="env-form">
+  <div class="env-page-grid">
+
+    <!-- ================================================================
+         SECTION 1 — Claw 执行引擎  (purple)
+    ================================================================ -->
+    <div class="env-section env-section-claw">
+      <div class="env-section-head">
+        <span class="env-section-icon">🦞</span>
+        <div>
+          <div class="env-section-title">{{ ui_text('Claw 执行引擎', 'Claw Execution Engine') }}</div>
+          <div class="env-section-sub">{{ ui_text('控制 Claw ReAct 循环的深度与迭代上限。', 'Controls depth and iteration caps for the Claw ReAct loop.') }}</div>
+        </div>
+      </div>
+
+      <div class="env-field-grid">
+        <div class="env-field">
+          <label class="env-label">{{ ui_text('执行模式', 'Execution Mode') }}</label>
+          <select name="web_execution_mode" class="env-select">
+            <option value="claw" {% if ev.web_execution_mode == 'claw' %}selected{% endif %}>claw</option>
+            <option value="noop" {% if ev.web_execution_mode == 'noop' %}selected{% endif %}>noop</option>
+          </select>
+          <div class="env-hint">{{ ui_text('"claw" 启用完整 ReAct 循环；"noop" 跳过所有执行（调试用）。', '"claw" runs the full ReAct loop; "noop" skips all execution (debug only).') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('每章最大步数', 'Max Steps / Chapter') }}
+            <span class="env-label-badge">CLAW_MAX_STEPS</span>
+          </label>
+          <div class="env-slider-row">
+            <input type="range" name="web_claw_max_steps" id="slider_claw_steps"
+              min="4" max="100" step="1"
+              value="{{ ev.web_claw_max_steps }}"
+              class="env-range"
+              oninput="document.getElementById('val_claw_steps').textContent=this.value">
+            <span class="env-range-val" id="val_claw_steps">{{ ev.web_claw_max_steps }}</span>
+          </div>
+          <div class="env-hint">{{ ui_text('Claw 每章 ReAct 循环的最大工具调用次数（4–100）。步数越多写作越深入，但耗时更长。', 'Max tool calls per chapter in the ReAct loop (4–100). More steps = deeper writing, longer runtime.') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('最大轮次', 'Max Iterations') }}
+            <span class="env-label-badge">WEB_MAX_ITERATIONS</span>
+          </label>
+          <input type="number" name="web_max_iterations" min="1" max="500" step="1"
+            value="{{ ev.web_max_iterations }}" class="env-input">
+          <div class="env-hint">{{ ui_text('整个任务的最大连续轮次（1–500）。', 'Max consecutive rounds for the entire job (1–500).') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('全局最大轮次', 'Max Total Iterations') }}
+            <span class="env-label-badge">WEB_MAX_TOTAL_ITERATIONS</span>
+          </label>
+          <input type="number" name="web_max_total_iterations" min="1" max="1000" step="1"
+            value="{{ ev.web_max_total_iterations }}" class="env-input">
+          <div class="env-hint">{{ ui_text('包含重试的全局最大轮次上限（1–1000）。', 'Absolute cap including retries (1–1000).') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================
+         SECTION 2 — 章节生成参数  (blue)
+    ================================================================ -->
+    <div class="env-section env-section-chapter">
+      <div class="env-section-head">
+        <span class="env-section-icon">✍️</span>
+        <div>
+          <div class="env-section-title">{{ ui_text('章节生成参数', 'Chapter Generation') }}</div>
+          <div class="env-section-sub">{{ ui_text('控制每章字数、子轮次与批量写作节奏。', 'Controls per-chapter word count, sub-rounds, and batch pacing.') }}</div>
+        </div>
+      </div>
+
+      <div class="env-field-grid">
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('章节最少字符数', 'Min Chapter Chars') }}
+            <span class="env-label-badge">MIN_CHAPTER_CHARS</span>
+          </label>
+          <input type="number" name="min_chapter_chars" min="300" max="50000" step="100"
+            value="{{ ev.min_chapter_chars }}" class="env-input">
+          <div class="env-hint">{{ ui_text('生成章节的最低字符数（300–50000）。低于此值 Claw 会尝试扩写。', 'Minimum characters per generated chapter (300–50000). Below this Claw attempts expansion.') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('章节最多字符数', 'Max Chapter Chars') }}
+            <span class="env-label-badge">MAX_CHAPTER_CHARS</span>
+          </label>
+          <input type="number" name="max_chapter_chars" min="0" max="100000" step="100"
+            value="{{ ev.max_chapter_chars }}" class="env-input">
+          <div class="env-hint">{{ ui_text('0 = 不限制上限。设置后超过此值会被截断。', '0 = no upper limit. If set, output exceeding this will be truncated.') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('章节子轮次上限', 'Max Chapter Sub-rounds') }}
+            <span class="env-label-badge">WEB_MAX_CHAPTER_SUBROUNDS</span>
+          </label>
+          <input type="number" name="web_max_chapter_subrounds" min="1" max="10" step="1"
+            value="{{ ev.web_max_chapter_subrounds }}" class="env-input">
+          <div class="env-hint">{{ ui_text('每章内部最多重写修订轮次（1–10）。', 'Max internal rewrite rounds per chapter (1–10).') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('每轮章节数', 'Chapters Per Iteration') }}
+            <span class="env-label-badge">WEB_CHAPTERS_PER_ITER</span>
+          </label>
+          <input type="number" name="web_chapters_per_iter" min="1" max="10" step="1"
+            value="{{ ev.web_chapters_per_iter }}" class="env-input">
+          <div class="env-hint">{{ ui_text('每次执行循环写几章（1–10）。', 'How many chapters to write per execution cycle (1–10).') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================
+         SECTION 3 — 性能与加速  (amber)
+    ================================================================ -->
+    <div class="env-section env-section-perf">
+      <div class="env-section-head">
+        <span class="env-section-icon">⚡</span>
+        <div>
+          <div class="env-section-title">{{ ui_text('性能与加速', 'Performance & Speed') }}</div>
+          <div class="env-section-sub">{{ ui_text('快速模式、评估周期与全量循环频率。', 'Fast mode toggle, eval cadence, and full-cycle frequency.') }}</div>
+        </div>
+      </div>
+
+      <div class="env-field-grid">
+        <div class="env-field env-field-toggle">
+          <label class="env-label">
+            {{ ui_text('快速模式', 'Fast Mode') }}
+            <span class="env-label-badge">WEB_FAST_MODE</span>
+          </label>
+          <label class="env-toggle-switch">
+            <input type="checkbox" name="web_fast_mode" value="1"
+              {% if ev.web_fast_mode == '1' %}checked{% endif %}
+              class="env-toggle-checkbox">
+            <span class="env-toggle-track">
+              <span class="env-toggle-thumb"></span>
+            </span>
+            <span class="env-toggle-label">{{ ui_text('启用 → 跳过慢速评估步骤', 'On → skips slow eval steps') }}</span>
+          </label>
+          <div class="env-hint">{{ ui_text('开启后 Claw 跳过不必要的评估子步骤，明显加快章节生成速度。', 'When on, Claw skips optional evaluation sub-steps, noticeably speeding up generation.') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('全量循环间隔', 'Full Cycle Interval') }}
+            <span class="env-label-badge">WEB_FULL_CYCLE_INTERVAL</span>
+          </label>
+          <input type="number" name="web_full_cycle_interval" min="0" max="20" step="1"
+            value="{{ ev.web_full_cycle_interval }}" class="env-input">
+          <div class="env-hint">{{ ui_text('每隔多少章执行一次完整的角色/世界观同步（0 = 每章都同步）。', 'Full character/world sync every N chapters (0 = sync every chapter).') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('评估间隔', 'Eval Interval') }}
+            <span class="env-label-badge">WEB_EVAL_INTERVAL</span>
+          </label>
+          <input type="number" name="web_eval_interval" min="1" max="50" step="1"
+            value="{{ ev.web_eval_interval }}" class="env-input">
+          <div class="env-hint">{{ ui_text('每隔多少轮次触发一次质量评估器（需同时开启评估器）。', 'Run the quality evaluator every N rounds (requires evaluator to be enabled).') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================
+         SECTION 4 — LLM 参数  (green)
+    ================================================================ -->
+    <div class="env-section env-section-llm">
+      <div class="env-section-head">
+        <span class="env-section-icon">🧠</span>
+        <div>
+          <div class="env-section-title">{{ ui_text('LLM 参数', 'LLM Parameters') }}</div>
+          <div class="env-section-sub">{{ ui_text('温度、Token 限制与网络超时配置。', 'Temperature, token budget, and network timeout config.') }}</div>
+        </div>
+      </div>
+
+      <div class="env-field-grid">
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('温度', 'Temperature') }}
+            <span class="env-label-badge">TEMPERATURE</span>
+          </label>
+          <div class="env-slider-row">
+            <input type="range" name="temperature" id="slider_temp"
+              min="0.0" max="2.0" step="0.05"
+              value="{{ ev.temperature }}"
+              class="env-range env-range--green"
+              oninput="document.getElementById('val_temp').textContent=parseFloat(this.value).toFixed(2)">
+            <span class="env-range-val" id="val_temp">{{ ev.temperature }}</span>
+          </div>
+          <div class="env-hint">{{ ui_text('生成随机性（0.0 = 确定性，1.0 = 默认创意，2.0 = 高发散）。推荐 0.7–0.9。', 'Generation randomness (0.0 = deterministic, 1.0 = standard creative, 2.0 = highly divergent). Recommend 0.7–0.9.') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('最大 Token 数', 'Max Tokens') }}
+            <span class="env-label-badge">MAX_TOKENS</span>
+          </label>
+          <input type="number" name="max_tokens" min="1000" max="32000" step="500"
+            value="{{ ev.max_tokens }}" class="env-input">
+          <div class="env-hint">{{ ui_text('单次 LLM 调用最多生成的 Token 数（1000–32000）。', 'Max tokens per LLM call (1000–32000).') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('超时秒数', 'Timeout (seconds)') }}
+            <span class="env-label-badge">LLM_TIMEOUT_SECONDS</span>
+          </label>
+          <input type="number" name="llm_timeout_seconds" min="0" max="3600" step="10"
+            value="{{ ev.llm_timeout_seconds }}" class="env-input">
+          <div class="env-hint">{{ ui_text('0 = 不设超时。超时后自动重试。', '0 = no timeout. Auto-retries on timeout.') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('最大重试次数', 'Max Retries') }}
+            <span class="env-label-badge">LLM_MAX_RETRIES</span>
+          </label>
+          <input type="number" name="llm_max_retries" min="0" max="10" step="1"
+            value="{{ ev.llm_max_retries }}" class="env-input">
+          <div class="env-hint">{{ ui_text('LLM 调用失败后的最大重试次数（0–10）。', 'Max retries on LLM failure (0–10).') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================
+         SECTION 5 — 记忆与上下文  (slate)
+    ================================================================ -->
+    <div class="env-section env-section-memory">
+      <div class="env-section-head">
+        <span class="env-section-icon">💾</span>
+        <div>
+          <div class="env-section-title">{{ ui_text('记忆与上下文', 'Memory & Context') }}</div>
+          <div class="env-section-sub">{{ ui_text('动态记忆检索、上下文窗口与召回条数。', 'Dynamic memory retrieval, context window size, and recall count.') }}</div>
+        </div>
+      </div>
+
+      <div class="env-info-box env-info-box--slate">
+        <div class="env-info-icon">💡</div>
+        <div class="env-info-body">
+          <strong>{{ ui_text('关于"向量相似度"与动态记忆', 'About "vector similarity" and dynamic memory') }}</strong>
+          {{ ui_text('动态记忆本身就是向量数据库（Chroma）。Claw 调用 retrieve_context 时，会在向量库中做相似度搜索，找到最相关的记忆条目注入上下文。这不是额外的复杂度——它就是动态记忆运作的方式。MEMORY_ONLY_MODE=1（默认）表示仅使用动态记忆，已禁用外部静态 RAG。', 'Dynamic memory IS the vector database (Chroma). When Claw calls retrieve_context, it runs a similarity search in Chroma to find the most relevant memory entries to inject. This is not extra complexity — it is how dynamic memory works. MEMORY_ONLY_MODE=1 (default) means only dynamic memory is used; external static RAG is disabled.') }}
+        </div>
+      </div>
+
+      <div class="env-field-grid">
+        <div class="env-field env-field-toggle">
+          <label class="env-label">
+            {{ ui_text('仅使用动态记忆', 'Memory-Only Mode') }}
+            <span class="env-label-badge">WEB_MEMORY_ONLY_MODE</span>
+          </label>
+          <label class="env-toggle-switch">
+            <input type="checkbox" name="web_memory_only_mode" value="1"
+              {% if ev.web_memory_only_mode == '1' %}checked{% endif %}
+              class="env-toggle-checkbox">
+            <span class="env-toggle-track">
+              <span class="env-toggle-thumb"></span>
+            </span>
+            <span class="env-toggle-label">{{ ui_text('推荐开启 → 禁用静态 RAG，只用 Claw 动态记忆', 'Recommended On → disables static RAG, uses Claw dynamic memory only') }}</span>
+          </label>
+          <div class="env-hint">{{ ui_text('开启后 Claw 只依赖自身动态记忆系统，完全由 Claw 自主管理上下文。', 'When on, Claw relies solely on its own dynamic memory. Context is fully self-managed by Claw.') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('上下文最大字符数', 'Context Max Chars') }}
+            <span class="env-label-badge">CONTEXT_MAX_CHARS</span>
+          </label>
+          <input type="number" name="context_max_chars" min="2000" max="100000" step="1000"
+            value="{{ ev.context_max_chars }}" class="env-input">
+          <div class="env-hint">{{ ui_text('注入 LLM 的总上下文字符上限（2000–100000）。', 'Total character budget injected into LLM context (2000–100000).') }}</div>
+        </div>
+
+        <div class="env-field">
+          <label class="env-label">
+            {{ ui_text('近期上下文条数', 'Recent Context Items') }}
+            <span class="env-label-badge">RECENT_CONTEXT_ITEMS</span>
+          </label>
+          <input type="number" name="recent_context_items" min="1" max="20" step="1"
+            value="{{ ev.recent_context_items }}" class="env-input">
+          <div class="env-hint">{{ ui_text('从记忆库中召回的最近记忆条目数量（1–20）。', 'Number of recent memory entries recalled per retrieve_context call (1–20).') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================
+         SECTION 6 — 高级调试  (red, collapsible)
+    ================================================================ -->
+    <div class="env-section env-section-debug">
+      <details class="env-details">
+        <summary class="env-section-head env-section-head--clickable">
+          <span class="env-section-icon">🔬</span>
+          <div>
+            <div class="env-section-title">{{ ui_text('高级调试', 'Advanced & Debug') }}</div>
+            <div class="env-section-sub">{{ ui_text('评估器、RAG 与实验性功能。非必要请勿修改。点击展开。', 'Evaluator, RAG, and experimental flags. Do not change unless necessary. Click to expand.') }}</div>
+          </div>
+          <span class="env-section-expand-hint">▸</span>
+        </summary>
+
+        <div class="env-debug-warn">
+          {{ ui_text('⚠️ 以下选项会影响系统性能或改变执行路径，建议仅在明确了解效果后修改。', '⚠️ These options affect system performance or alter execution paths. Only modify when you know the effects.') }}
+        </div>
+
+        <div class="env-field-grid env-field-grid--narrow">
+          <div class="env-field env-field-toggle">
+            <label class="env-label">
+              {{ ui_text('启用质量评估器', 'Enable Evaluator') }}
+              <span class="env-label-badge">WEB_ENABLE_EVALUATOR</span>
+            </label>
+            <label class="env-toggle-switch">
+              <input type="checkbox" name="web_enable_evaluator" value="1"
+                {% if ev.web_enable_evaluator == '1' %}checked{% endif %}
+                class="env-toggle-checkbox">
+              <span class="env-toggle-track">
+                <span class="env-toggle-thumb"></span>
+              </span>
+              <span class="env-toggle-label">{{ ui_text('开启后每 N 轮进行章节质量打分', 'Scores chapter quality every N rounds when on') }}</span>
+            </label>
+          </div>
+
+          <div class="env-field env-field-toggle">
+            <label class="env-label">
+              {{ ui_text('启用 RAG', 'Enable RAG') }}
+              <span class="env-label-badge">WEB_ENABLE_RAG</span>
+            </label>
+            <label class="env-toggle-switch">
+              <input type="checkbox" name="web_enable_rag" value="1"
+                {% if ev.web_enable_rag == '1' %}checked{% endif %}
+                class="env-toggle-checkbox">
+              <span class="env-toggle-track">
+                <span class="env-toggle-thumb"></span>
+              </span>
+              <span class="env-toggle-label">{{ ui_text('开启外部文档检索增强（通常不需要）', 'Enable external document retrieval (usually not needed)') }}</span>
+            </label>
+          </div>
+
+          <div class="env-field env-field-toggle">
+            <label class="env-label">
+              {{ ui_text('启用静态知识库', 'Enable Static KB') }}
+              <span class="env-label-badge">WEB_ENABLE_STATIC_KB</span>
+            </label>
+            <label class="env-toggle-switch">
+              <input type="checkbox" name="web_enable_static_kb" value="1"
+                {% if ev.web_enable_static_kb == '1' %}checked{% endif %}
+                class="env-toggle-checkbox">
+              <span class="env-toggle-track">
+                <span class="env-toggle-thumb"></span>
+              </span>
+              <span class="env-toggle-label">{{ ui_text('挂载静态背景文档库（实验性）', 'Mount static background document store (experimental)') }}</span>
+            </label>
+          </div>
+
+          <div class="env-field env-field-toggle">
+            <label class="env-label">
+              {{ ui_text('启用转折点检测', 'Turning Point Detection') }}
+              <span class="env-label-badge">TURNING_POINT_ENABLED</span>
+            </label>
+            <label class="env-toggle-switch">
+              <input type="checkbox" name="turning_point_enabled" value="1"
+                {% if ev.turning_point_enabled == '1' %}checked{% endif %}
+                class="env-toggle-checkbox">
+              <span class="env-toggle-track">
+                <span class="env-toggle-thumb"></span>
+              </span>
+              <span class="env-toggle-label">{{ ui_text('自动在故事结构中插入关键转折点', 'Automatically inserts key turning points into story structure') }}</span>
+            </label>
+          </div>
+        </div>
+      </details>
+    </div>
+
+  </div><!-- end .env-page-grid -->
+
+  <div class="env-save-bar">
+    <button type="submit" class="primary-btn env-save-btn">{{ ui_text('保存所有设置', 'Save All Settings') }}</button>
+    <span class="env-save-hint">{{ ui_text('所有更改立即生效并写入 .env 文件。', 'All changes apply immediately and are written to .env.') }}</span>
+  </div>
+</form>
+
+{% endblock %}

@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+{% block title %}{{ job_detail_texts.page_title }} #{{ job.id }} | WriteClaw{% endblock %}
+{% block page_title %}{{ job_detail_texts.page_title }}{% endblock %}
+{% block page_subtitle %}{{ job_detail_texts.page_subtitle }}{% endblock %}
+{% block content %}
+{% set snapshot = progress_snapshot|default({
+  "phase_label": "running",
+  "phase_note": "",
+  "elapsed_seconds": 0,
+  "idle_seconds": -1,
+  "current_chapter": 0,
+  "planned_total": 0,
+  "chapter_words": 0,
+  "total_words": 0,
+  "percent": 0,
+  "stalled": false,
+  "stall_reason": "",
+  "memory_counts": {
+    "outlines": 0,
+    "texts": 0,
+    "characters": 0,
+    "world_settings": 0,
+    "fact_cards": 0
+  }
+}, true) %}
+{% set texts = job_detail_texts %}
+
+<section class="hero compact">
+  <h1>{{ texts.job_title }} #{{ job.id }}</h1>
+  <p class="muted">{{ texts.provider }}: {{ job.provider|upper }} | {{ texts.status }}: <span id="job-status" class="pill pill-{{ job.status }}">{{ texts["status_" ~ job.status] if ("status_" ~ job.status) in texts else job.status }}</span></p>
+  <div class="row-actions" style="margin-top: 12px;">
+    <a href="/console/chat{% if related_session %}?session_id={{ related_session.id }}{% endif %}" class="btn btn-outline btn-xs">{{ texts.back_chat if related_session else texts.back_dashboard }}</a>
+    <a href="/console/chat#new-session-form" class="btn btn-outline btn-xs">{{ ui_text('新建会话', 'New conversation') }}</a>
+  </div>
+  {% if job.status in ["queued", "running"] %}
+  <form method="post" action="/jobs/{{ job.id }}/cancel" class="inline-form">
+    <button type="submit" class="btn btn-outline btn-xs">{{ texts.cancel_job }}</button>
+  </form>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>{{ texts.job_input }}</h2>
+  <p class="idea-block">{{ job.idea }}</p>
+  <p class="muted">{{ texts.run_id }}: {{ job.run_id if job.run_id else "-" }}</p>
+  <p class="muted">{{ texts.output_path }}: {{ job.output_path if job.output_path else "-" }}</p>
+  <p>
+    <a class="btn btn-outline btn-xs" href="/jobs/{{ job.id }}/download/output">{{ texts.download_output }}</a>
+    <a class="btn btn-outline btn-xs" href="/jobs/{{ job.id }}/download/chapters">{{ texts.download_chapters }}</a>
+  </p>
+</section>
+
+<section class="card">
+  <h2>{{ texts.execution_status }}</h2>
+  <div class="job-kpi-grid">
+    <div class="job-kpi"><div class="job-kpi-label">{{ texts.phase }}</div><div class="job-kpi-value" id="phase-label">{{ snapshot.phase_label }}</div></div>
+    <div class="job-kpi"><div class="job-kpi-label">{{ texts.elapsed }}</div><div class="job-kpi-value"><span id="elapsed-seconds">{{ snapshot.elapsed_seconds }}</span>s</div></div>
+    <div class="job-kpi"><div class="job-kpi-label">{{ texts.idle }}</div><div class="job-kpi-value"><span id="idle-seconds">{% if snapshot.idle_seconds >= 0 %}{{ snapshot.idle_seconds }}{% else %}-{% endif %}</span>s</div></div>
+    <div class="job-kpi"><div class="job-kpi-label">{{ texts.chapter_progress }}</div><div class="job-kpi-value" id="chapter-progress">{% if snapshot.planned_total > 0 %}{{ snapshot.current_chapter if snapshot.current_chapter > 0 else 0 }}/{{ snapshot.planned_total }}{% else %}-{% endif %}</div></div>
+  </div>
+  <p class="muted" style="margin-top:16px;">{{ texts.current_action }}: <strong id="phase-note">{{ snapshot.phase_note|default("-", true) }}</strong></p>
+  <p class="muted">{{ texts.chapter_words }}: <strong id="chapter-words">{{ snapshot.chapter_words }}</strong> | {{ texts.total_words }}: <strong id="total-words">{{ snapshot.total_words }}</strong></p>
+  <p class="muted">{{ texts.memory }}: {{ texts.outlines }}=<strong id="mc-outlines">{{ snapshot.memory_counts.outlines if snapshot.memory_counts is defined and snapshot.memory_counts else 0 }}</strong>, {{ texts.texts }}=<strong id="mc-texts">{{ snapshot.memory_counts.texts if snapshot.memory_counts is defined and snapshot.memory_counts else 0 }}</strong>, {{ texts.characters }}=<strong id="mc-characters">{{ snapshot.memory_counts.characters if snapshot.memory_counts is defined and snapshot.memory_counts else 0 }}</strong>, {{ texts.worlds }}=<strong id="mc-worlds">{{ snapshot.memory_counts.world_settings if snapshot.memory_counts is defined and snapshot.memory_counts else 0 }}</strong>, {{ texts.facts }}=<strong id="mc-facts">{{ snapshot.memory_counts.fact_cards if snapshot.memory_counts is defined and snapshot.memory_counts else 0 }}</strong></p>
+  <div class="progress-track">
+    <div id="progress-bar" class="progress-bar" style="width: {{ snapshot.percent }}%;"></div>
+  </div>
+  <p id="stall-hint" class="muted {% if not snapshot.stalled %}hidden{% endif %}">{{ snapshot.stall_reason if snapshot.stalled else "" }}</p>
+</section>
+
+<section class="card">
+  <h2>{{ texts.agent_trace }}</h2>
+  <p class="muted">{{ texts.agent_trace_hint }}</p>
+  <div id="agent-trace" style="display:grid;gap:10px;">
+    <div class="muted">{{ texts.no_agent_trace }}</div>
+  </div>
+  {# Between-chapter checkpoint card — shown when Claw finishes a chapter #}
+  <div id="chapter-checkpoint" style="display:none; margin-top: 18px;"></div>
+</section>
+
+<section class="card">
+  <h2>{{ texts.live_progress }}</h2>
+  <p class="muted">{{ texts.live_progress_hint }}</p>
+  <pre id="worker-log" class="log-box">{{ worker_log_text if worker_log_text else texts.no_worker_log }}</pre>
+</section>
+
+<section class="card">
+  <h2>{{ texts.progress_log }}</h2>
+  <pre id="progress-log" class="log-box">{{ progress_log_text if progress_log_text else texts.no_progress_log }}</pre>
+</section>
+
+<section class="card">
+  <h2>{{ texts.chapter_results }}</h2>
+  <p class="muted">{{ texts.chapter_results_hint }}</p>
+  <div id="chapters-wrap">
+    {% if chapter_outputs %}
+      {% for ch in chapter_outputs %}
+      <article class="chapter-item">
+        <h3>{{ texts.chapter }} {{ ch.chapter }}</h3>
+        <p class="muted">{{ texts.iteration }} {{ ch.iteration }} | {{ ch.filename }}</p>
+        <p><a class="btn btn-outline btn-xs" href="/jobs/{{ job.id }}/download/chapter/{{ ch.chapter }}">{{ texts.download_chapter }} {{ ch.chapter }}</a></p>
+        <pre class="chapter-box" data-chapter="{{ ch.chapter }}">{{ ch.content }}</pre>
+      </article>
+      {% endfor %}
+    {% else %}
+      <p id="chapters-empty" class="muted">{{ texts.no_chapter_output }}</p>
+    {% endif %}
+  </div>
+</section>
+
+{% if job.error_message %}
+<section class="card">
+  <h2>{{ texts.error }}</h2>
+  <pre class="error-block">{{ job.error_message }}</pre>
+</section>
+{% endif %}
+
+{% if output_text %}
+<section class="card">
+  <h2>{{ texts.generated_text }}</h2>
+  <p class="muted">{{ texts.run_id }}: {{ job.run_id }}</p>
+  <div class="output-box">{{ output_text }}</div>
+</section>
+{% else %}
+<section class="card">
+  <h2>{{ texts.result }}</h2>
+  <p class="muted">{{ texts.result_pending }}</p>
+</section>
+{% endif %}
+
+<a href="/console/chat{% if related_session %}?session_id={{ related_session.id }}{% endif %}" class="btn btn-outline">{{ texts.back_chat if related_session else texts.back_dashboard }}</a>
+
+<script>
+  (function () {
+    const jobId = {{ job.id }};
+    const workerBox = document.getElementById("worker-log");
+    const ui = {{ texts|tojson }};
+    const progressBox = document.getElementById("progress-log");
+    const statusEl = document.getElementById("job-status");
+    const chaptersWrap = document.getElementById("chapters-wrap");
+    const phaseLabelEl = document.getElementById("phase-label");
+    const phaseNoteEl = document.getElementById("phase-note");
+    const elapsedEl = document.getElementById("elapsed-seconds");
+    const idleEl = document.getElementById("idle-seconds");
+    const chapterProgressEl = document.getElementById("chapter-progress");
+    const chapterWordsEl = document.getElementById("chapter-words");
+    const totalWordsEl = document.getElementById("total-words");
+    const progressBarEl = document.getElementById("progress-bar");
+    const stallHintEl = document.getElementById("stall-hint");
+    const mcOutlinesEl = document.getElementById("mc-outlines");
+    const mcTextsEl = document.getElementById("mc-texts");
+    const mcCharactersEl = document.getElementById("mc-characters");
+    const mcWorldsEl = document.getElementById("mc-worlds");
+    const mcFactsEl = document.getElementById("mc-facts");
+    const traceWrap = document.getElementById("agent-trace");
+
+    let lastChaptersSignature = "";
+
+    function updateStatusClass(status) {
+      if (!statusEl) return;
+      statusEl.className = "pill pill-" + status;
+      statusEl.textContent = ui["status_" + status] || status;
+    }
+
+    function updateLogBox(el, text, emptyLabel) {
+      if (!el) return;
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+      el.textContent = text || emptyLabel;
+      if (nearBottom) {
+        el.scrollTop = el.scrollHeight;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function parseTraceKv(detail) {
+      const data = {};
+      String(detail || '').split(',').forEach((part) => {
+        const idx = part.indexOf('=');
+        if (idx <= 0) return;
+        const key = part.slice(0, idx).trim();
+        const value = part.slice(idx + 1).trim();
+        if (key) data[key] = value;
+      });
+      return data;
+    }
+
+    const TOOL_META_JD = {
+      plot_strategy:     { icon: '📋', label: 'plot_strategy' },
+      retrieve_context:  { icon: '🔍', label: 'retrieve_context' },
+      enrich_character:  { icon: '👤', label: 'enrich_character' },
+      enrich_world:      { icon: '🌍', label: 'enrich_world' },
+      inspect_workspace: { icon: '🗂️', label: 'inspect_workspace' },
+      draft_chapter:     { icon: '✍️', label: 'draft_chapter' },
+      rewrite_chapter:   { icon: '🔄', label: 'rewrite_chapter' },
+      sync_storyboard:   { icon: '📌', label: 'sync_storyboard' },
+      sync_characters:   { icon: '💾', label: 'sync_characters' },
+      sync_world:        { icon: '💾', label: 'sync_world' },
+      ask_user:          { icon: '🤔', label: 'ask_user' },
+      finalize:          { icon: '✅', label: 'finalize' },
+    };
+    function jdToolMeta(name) { return TOOL_META_JD[name] || { icon: '⚡', label: name }; }
+
+    function buildJdItems(entries) {
+      const items = [];
+      for (const entry of entries) {
+        const kv = parseTraceKv(entry.detail);
+        const name = entry.eventName;
+        if (name === 'claw_loop_start' || name === 'claw_native_loop') {
+          items.push({ type: 'loop-banner', stamp: entry.stamp, maxSteps: kv.max_steps || '-', enabledActions: kv.enabled_actions || '' });
+          continue;
+        }
+        if (name === 'claw_decision' || name === 'claw_action_start') {
+          const action = kv.action || name;
+          items.push({ type: 'tool-card', id: `tc-${entry.stamp}-${action}`, action, meta: jdToolMeta(action), step: kv.step || '-', status: 'running', stamp: entry.stamp, params: kv.params || kv.reason || kv.channel || entry.detail || '', result: null });
+          continue;
+        }
+        if (name === 'claw_action_result') {
+          const action = kv.action || '';
+          for (let i = items.length - 1; i >= 0; i--) {
+            if (items[i].type === 'tool-card' && items[i].action === action && items[i].status === 'running') {
+              items[i].status = 'complete'; items[i].result = kv.excerpt || entry.detail || ''; break;
+            }
+          }
+          continue;
+        }
+        if (name === 'claw_write_result' || name === 'claw_candidate_update') {
+          for (let i = items.length - 1; i >= 0; i--) {
+            if (items[i].type === 'tool-card' && items[i].status === 'running') {
+              items[i].status = 'complete'; items[i].result = `reward=${kv.reward||'-'} | issues=${kv.issues||'-'} | length=${kv.length||'-'} chars`; break;
+            }
+          }
+          continue;
+        }
+        if (name === 'claw_finalize_ready' || name === 'claw_loop_complete') {
+          items.push({ type: 'complete-banner', stamp: entry.stamp, reason: kv.reason || entry.detail || 'Complete' });
+          continue;
+        }
+        if (name === 'claw_ask_user') {
+          items.push({ type: 'tool-card', id: `tc-${entry.stamp}-ask_user`, action: 'ask_user', meta: jdToolMeta('ask_user'), step: kv.step || '-', status: 'ask', stamp: entry.stamp, params: kv.question || entry.detail || '', result: null });
+          continue;
+        }
+        if (name === 'claw_user_chapter_instruction') {
+          items.push({ type: 'status-pill', stamp: entry.stamp, label: `💬 User chapter instruction → ch${kv.chapter||'?'}` });
+          continue;
+        }
+      }
+      return items;
+    }
+
+    function renderJdItem(item, isLive) {
+      if (item.type === 'loop-banner') {
+        return `<div class="claw-loop-banner"><span class="claw-loop-banner-icon">🦞</span><div><div>OpenClaw ReAct loop started</div><div class="claw-loop-banner-meta">max_steps=${escapeHtml(item.maxSteps)}${item.enabledActions?' · tools: '+escapeHtml(item.enabledActions.replace(/,/g,', ')):''}  </div></div></div>`;
+      }
+      if (item.type === 'complete-banner') {
+        return `<div class="claw-complete-banner"><span style="font-size:22px;">✅</span><div><div>Claw loop complete</div><div style="font-size:12px;opacity:0.85;font-weight:500;margin-top:2px;">${escapeHtml(item.reason)}</div></div></div>`;
+      }
+      if (item.type === 'status-pill') {
+        return `<div class="tc-status-pill">${escapeHtml(item.label)}</div>`;
+      }
+      if (item.type === 'tool-card') {
+        const { meta, step, status, params, result } = item;
+        const badgeClass = status === 'running' ? 'tc-badge-running' : status === 'complete' ? 'tc-badge-complete' : status === 'ask' ? 'tc-badge-error' : 'tc-badge-pending';
+        const badgeLabel = status === 'running' ? 'Running…' : status === 'complete' ? 'Done' : status === 'ask' ? 'Waiting for you' : status;
+        const cardClass = status === 'running' ? 'tc-running' : status === 'complete' ? 'tc-complete' : status === 'ask' ? 'tc-ask' : '';
+        let bodyHtml = '';
+        if (params) bodyHtml += `<div class="tc-params-label">Input</div><div class="tc-params-block">${escapeHtml(params)}</div>`;
+        if (result) bodyHtml += `<div class="tc-result-label">Result</div><div class="tc-result-block ${status==='complete'?'tc-ok':''}">${escapeHtml(result)}</div>`;
+        const spinnerHtml = (status === 'running' && isLive) ? `<div class="tc-spinner-line"><div class="tc-spinner"></div>Executing ${escapeHtml(meta.label)}…</div>` : '';
+        return `<article class="tool-call-card ${cardClass}" data-tc-id="${escapeHtml(item.id)}">
+  <div class="tool-call-header" onclick="this.parentElement.classList.toggle('tc-open')">
+    <span class="tool-call-icon">${escapeHtml(meta.icon)}</span>
+    <span class="tool-call-name">${escapeHtml(meta.label)}</span>
+    <span class="tool-call-step">step ${escapeHtml(String(step))}</span>
+    <span class="tc-badge ${badgeClass}">${badgeLabel}</span>
+    <span class="tc-chevron">▶</span>
+  </div>
+  ${spinnerHtml}
+  <div class="tool-call-body">${bodyHtml || '<span style="color:#9aa3b0;font-size:12px;">No details</span>'}</div>
+</article>`;
+      }
+      return '';
+    }
+
+    let jdIsLive = ["queued", "running"].includes("{{ job.status }}");
+
+    function renderTrace(progressText) {
+      if (!traceWrap) return;
+      const raw = String(progressText || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const entries = [];
+      for (const line of raw) {
+        if (!line.startsWith('[event]')) continue;
+        const parts = line.split('|').map(p => p.trim());
+        if (parts.length < 2) continue;
+        entries.push({ stamp: String(parts[0]||'').replace('[event]','').trim(), eventName: parts[1]||'', detail: parts.slice(2).join(' | ') });
+      }
+      if (!entries.length) { traceWrap.innerHTML = `<div class="muted">${ui.no_agent_trace}</div>`; return; }
+      const items = buildJdItems(entries);
+      if (!items.length) { traceWrap.innerHTML = `<div class="muted">${ui.no_agent_trace}</div>`; return; }
+
+      // Preserve open state
+      const openIds = new Set();
+      traceWrap.querySelectorAll('.tool-call-card.tc-open').forEach(el => openIds.add(el.dataset.tcId));
+
+      traceWrap.innerHTML = items.map(item => renderJdItem(item, jdIsLive)).join('\n');
+
+      traceWrap.querySelectorAll('.tool-call-card').forEach(el => {
+        if (openIds.has(el.dataset.tcId)) el.classList.add('tc-open');
+      });
+      const running = traceWrap.querySelector('.tool-call-card.tc-running, .tool-call-card.tc-ask');
+      if (running && !running.classList.contains('tc-open')) running.classList.add('tc-open');
+    }
+
+    function buildChaptersSignature(chapters) {
+      if (!chapters || chapters.length === 0) return "";
+      return chapters.map((ch) => {
+        const chapter = ch.chapter ?? "";
+        const iter = ch.iteration ?? "";
+        const filename = ch.filename || "";
+        const length = (ch.content || "").length;
+        return `${chapter}:${iter}:${filename}:${length}`;
+      }).join("|");
+    }
+
+    function captureChapterScrollPositions() {
+      const map = {};
+      if (!chaptersWrap) return map;
+      chaptersWrap.querySelectorAll(".chapter-box[data-chapter]").forEach((el) => {
+        const chapter = el.getAttribute("data-chapter");
+        if (chapter) map[chapter] = el.scrollTop;
+      });
+      return map;
+    }
+
+    function restoreChapterScrollPositions(scrollMap) {
+      if (!chaptersWrap) return;
+      chaptersWrap.querySelectorAll(".chapter-box[data-chapter]").forEach((el) => {
+        const chapter = el.getAttribute("data-chapter");
+        if (chapter && Object.prototype.hasOwnProperty.call(scrollMap, chapter)) {
+          el.scrollTop = scrollMap[chapter];
+        }
+      });
+    }
+
+    function renderChapters(chapters) {
+      if (!chaptersWrap) return;
+      const signature = buildChaptersSignature(chapters);
+      if (signature === lastChaptersSignature) {
+        return;
+      }
+      const chapterBoxScroll = captureChapterScrollPositions();
+
+      if (!chapters || chapters.length === 0) {
+        chaptersWrap.innerHTML = `<p id="chapters-empty" class="muted">${ui.no_chapter_output}</p>`;
+        lastChaptersSignature = signature;
+        return;
+      }
+
+      chaptersWrap.innerHTML = chapters.map((ch) => {
+        const chapterNo = Number(ch.chapter || 0);
+        const title = `${ui.chapter} ${chapterNo || "?"}`;
+        const meta = `${ui.iteration} ${Number(ch.iteration || 0)} | ${escapeHtml(ch.filename || "")}`;
+        const downloadHref = chapterNo > 0 ? `/jobs/${jobId}/download/chapter/${chapterNo}` : "#";
+        const downloadLabel = chapterNo > 0 ? `${ui.download_chapter} ${chapterNo}` : ui.download_chapter;
+        return `
+          <article class="chapter-item">
+            <h3>${title}</h3>
+            <p class="muted">${meta}</p>
+            <p><a class="btn btn-outline btn-xs" href="${downloadHref}">${downloadLabel}</a></p>
+            <pre class="chapter-box" data-chapter="${chapterNo}">${escapeHtml(ch.content || "")}</pre>
+          </article>
+        `;
+      }).join("");
+
+      restoreChapterScrollPositions(chapterBoxScroll);
+      lastChaptersSignature = signature;
+    }
+
+    function renderSnapshot(snapshot) {
+      if (!snapshot) return;
+      if (phaseLabelEl) phaseLabelEl.textContent = snapshot.phase_label || "-";
+      if (phaseNoteEl) phaseNoteEl.textContent = snapshot.phase_note || "-";
+      if (elapsedEl) elapsedEl.textContent = String(snapshot.elapsed_seconds ?? 0);
+      if (idleEl) idleEl.textContent = snapshot.idle_seconds >= 0 ? String(snapshot.idle_seconds) : "-";
+      if (chapterProgressEl) {
+        const cur = snapshot.current_chapter || 0;
+        const total = Number(snapshot.planned_total || 0);
+        chapterProgressEl.textContent = total > 0 ? `${cur}/${total}` : "-";
+      }
+      if (chapterWordsEl) chapterWordsEl.textContent = String(snapshot.chapter_words ?? 0);
+      if (totalWordsEl) totalWordsEl.textContent = String(snapshot.total_words ?? 0);
+      if (progressBarEl) {
+        const pct = Math.max(0, Math.min(100, Number(snapshot.percent || 0)));
+        progressBarEl.style.width = `${pct}%`;
+      }
+      const mc = snapshot.memory_counts || {};
+      if (mcOutlinesEl) mcOutlinesEl.textContent = String(mc.outlines ?? 0);
+      if (mcTextsEl) mcTextsEl.textContent = String(mc.texts ?? 0);
+      if (mcCharactersEl) mcCharactersEl.textContent = String(mc.characters ?? 0);
+      if (mcWorldsEl) mcWorldsEl.textContent = String(mc.world_settings ?? 0);
+      if (mcFactsEl) mcFactsEl.textContent = String(mc.fact_cards ?? 0);
+      if (stallHintEl) {
+        if (snapshot.stalled) {
+          stallHintEl.classList.remove("hidden");
+          stallHintEl.textContent = snapshot.stall_reason || ui.stall_fallback;
+        } else {
+          stallHintEl.classList.add("hidden");
+          stallHintEl.textContent = "";
+        }
+      }
+    }
+
+    async function pollChapters() {
+      try {
+        const resp = await fetch(`/jobs/${jobId}/chapters`, { cache: "no-store" });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        renderChapters(data.chapters || []);
+      } catch (err) {
+        // ignore transient polling errors
+      }
+    }
+
+    const CHECKPOINT_CHIPS_JD = [
+      'Keep going — looks great!',
+      'Slow down and add more detail',
+      'Increase tension in next chapter',
+      'Focus more on character development',
+      'Add more world-building details',
+    ];
+    const checkpointWrap = document.getElementById('chapter-checkpoint');
+    let checkpointVisible = false;
+
+    function renderCheckpointJd(payload, runId) {
+      if (!checkpointWrap || checkpointVisible) return;
+      checkpointVisible = true;
+      const chNo = payload.chapter || '?';
+      const planned = payload.planned_total || '?';
+      checkpointWrap.innerHTML = `
+<div class="chapter-checkpoint-card">
+  <div class="chapter-checkpoint-header">
+    <span class="chapter-checkpoint-icon">🏁</span>
+    <div>
+      <div class="chapter-checkpoint-title">Chapter ${escapeHtml(String(chNo))} complete!</div>
+      <div class="chapter-checkpoint-subtitle">${escapeHtml(String(chNo))} of ${escapeHtml(String(planned))} · Claw waits for your input</div>
+    </div>
+  </div>
+  <div style="font-size:13px;color:#374151;font-weight:600;">Quick suggestions:</div>
+  <div class="chapter-checkpoint-chips">${CHECKPOINT_CHIPS_JD.map(c => `<span class="checkpoint-chip" data-chip="${escapeHtml(c)}">${escapeHtml(c)}</span>`).join('')}</div>
+  <div class="chapter-checkpoint-input-row">
+    <textarea class="chapter-checkpoint-textarea" rows="3" placeholder="Leave a message for Claw (or just click Continue)"></textarea>
+    <button class="primary-btn chapter-checkpoint-submit" type="button">Continue →</button>
+  </div>
+  <div class="chapter-checkpoint-status" style="display:none;"></div>
+  <div class="chapter-checkpoint-skip" data-skip>Skip without a message →</div>
+</div>`;
+      checkpointWrap.style.display = '';
+
+      const ta = checkpointWrap.querySelector('.chapter-checkpoint-textarea');
+      const btn = checkpointWrap.querySelector('.chapter-checkpoint-submit');
+      const statusDiv = checkpointWrap.querySelector('.chapter-checkpoint-status');
+      checkpointWrap.querySelectorAll('.checkpoint-chip').forEach(chip => {
+        chip.addEventListener('click', () => { ta.value = chip.dataset.chip; ta.focus(); });
+      });
+
+      async function sendAndDismiss(msg) {
+        btn.disabled = true;
+        statusDiv.style.display = '';
+        statusDiv.textContent = 'Sending to Claw…';
+        try {
+          const r = await fetch(`/api/runs/${runId}/chapter-message`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg || '' }),
+          });
+          if (r.ok) {
+            statusDiv.textContent = '✓ Claw is continuing…';
+            setTimeout(() => { checkpointWrap.style.display = 'none'; checkpointWrap.innerHTML = ''; checkpointVisible = false; }, 1400);
+          } else { statusDiv.textContent = 'Failed. Try again.'; btn.disabled = false; }
+        } catch (e) { statusDiv.textContent = `Error: ${e.message}`; btn.disabled = false; }
+      }
+
+      btn.addEventListener('click', () => sendAndDismiss(ta.value.trim()));
+      checkpointWrap.querySelector('[data-skip]').addEventListener('click', () => sendAndDismiss(''));
+    }
+
+    let chapterCheckpointRunId = '{{ job.run_id if job.run_id else "" }}';
+    let checkpointPolling = false;
+
+    async function pollCheckpoint() {
+      if (!chapterCheckpointRunId || checkpointPolling || checkpointVisible) return;
+      checkpointPolling = true;
+      try {
+        const r = await fetch(`/api/runs/${chapterCheckpointRunId}/chapter-complete`, { cache: 'no-store' });
+        const d = await r.json();
+        if (d.pending) renderCheckpointJd(d, chapterCheckpointRunId);
+      } catch (_) {}
+      checkpointPolling = false;
+    }
+
+    async function pollLogs() {
+      try {
+        const resp = await fetch(`/jobs/${jobId}/logs`, { cache: "no-store" });
+        if (!resp.ok) return;
+        const data = await resp.json();
+
+        updateLogBox(workerBox, data.worker_log, ui.no_worker_log);
+        updateLogBox(progressBox, data.progress_log, ui.no_progress_log);
+        renderTrace(data.progress_log || "");
+        updateStatusClass(data.status || "unknown");
+        if (data.progress_snapshot) {
+          renderSnapshot(data.progress_snapshot);
+        }
+        if (data.run_id) chapterCheckpointRunId = data.run_id;
+        await pollChapters();
+        await pollCheckpoint();
+
+        if (["succeeded", "failed", "canceled"].includes(data.status)) {
+          jdIsLive = false;
+          setTimeout(() => window.location.reload(), 1000);
+          return;
+        }
+      } catch (err) {
+        // ignore transient polling errors
+      }
+      setTimeout(pollLogs, 2000);
+    }
+
+    renderSnapshot({{ snapshot|tojson }});
+    renderChapters({{ chapter_outputs|tojson }});
+    lastChaptersSignature = buildChaptersSignature({{ chapter_outputs|tojson }});
+    renderTrace({{ progress_log_text|tojson }});
+
+    if (["queued", "running"].includes("{{ job.status }}")) {
+      pollLogs();
+    }
+  })();
+</script>
+{% endblock %}

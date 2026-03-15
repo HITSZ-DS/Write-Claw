@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Login | WriteClaw{% endblock %}
+{% block content %}
+<section class="auth-wrap">
+  <article class="auth-hero">
+    <div>
+      <div class="auth-hero-badge">WriteClaw Console</div>
+      <h1>Turn the old workflow into a real writing claw.</h1>
+      <p>WriteClaw is meant to become a usable creative-writing system with dynamic memory, agent routing, revision loops, and a unified console.</p>
+    </div>
+    <div>
+      <ul>
+        <li>Separate ideation from generation</li>
+        <li>Manage providers, keys, jobs, and logs in one place</li>
+        <li>Expose real agentic-loop state instead of fake workflow screens</li>
+      </ul>
+    </div>
+  </article>
+  <article class="auth-card">
+    <h1>Welcome back</h1>
+    <p class="muted">Log in to manage API keys, writing sessions, and generation runs.</p>
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+    <form method="post" action="/login" class="form-stack">
+      <div><label>Email</label><input type="email" name="email" required placeholder="you@example.com"></div>
+      <div><label>Password</label><input type="password" name="password" required placeholder="At least 8 characters"></div>
+      <button type="submit" class="btn btn-primary">Log In</button>
+    </form>
+    <p class="auth-footnote">No account yet? <a href="/register">Create one</a></p>
+  </article>
+</section>
+{% endblock %}

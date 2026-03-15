@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_text('角色', 'Characters') }} | WriteClaw{% endblock %}
+{% block content %}
+<div class="chars-root">
+
+  <header class="chars-header">
+    <div class="chars-header-copy">
+      <div class="chars-header-kicker">{{ ui_text('13 角色', '13 Characters') }}</div>
+      <h1>{{ ui_text('角色档案', 'Character Profiles') }}</h1>
+      <p>{{ ui_text('每个角色是一个独立的活状态档案，随章节推进自动更新内容，名字只出现一次。', 'Each character is a living profile — name appears once, content updates as chapters progress.') }}</p>
+    </div>
+    <div class="chars-header-stats">
+      <div class="chars-stat-pill">
+        <span>{{ ui_text('角色数', 'Characters') }}</span>
+        <strong>{{ character_cards|length }}</strong>
+      </div>
+      <div class="chars-stat-pill">
+        <span>{{ ui_text('实体状态', 'Entity state') }}</span>
+        <strong>{{ memory_overview.claw_counts.entity_state if memory_overview.claw_counts.entity_state else 0 }}</strong>
+      </div>
+      <div class="chars-stat-pill">
+        <span>{{ ui_text('关系状态', 'Relationship') }}</span>
+        <strong>{{ memory_overview.claw_counts.relationship_state if memory_overview.claw_counts.relationship_state else 0 }}</strong>
+      </div>
+    </div>
+  </header>
+
+  {% if character_cards %}
+  <div class="chars-grid">
+    {% for char in character_cards %}
+    <article class="char-profile {% if char.changes and char.changes|length > 0 %}char-profile--evolved{% endif %}">
+
+      <div class="char-profile-head">
+        <div class="char-profile-identity">
+          <div class="char-profile-avatar">{{ char.name[:1] | upper }}</div>
+          <div>
+            <h2 class="char-profile-name">{{ char.name }}</h2>
+            {% if char.latest_chapter %}
+            <div class="char-profile-meta">
+              <span class="char-chapter-badge">{{ ui_text('第', 'Ch.') }}{{ char.latest_chapter }}{{ ui_text('章', '') }}</span>
+              {% if char.change_count > 1 %}
+              <span class="char-evolution-badge">{{ char.change_count }} {{ ui_text('次变化', 'updates') }}</span>
+              {% endif %}
+            </div>
+            {% elif char.timestamp %}
+            <div class="char-profile-meta">
+              <span class="char-time-badge">{{ char.timestamp[:16] if char.timestamp|length > 16 else char.timestamp }}</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% if char.change_count > 1 %}
+        <div class="char-live-dot" title="{{ ui_text('角色持续演变中', 'Character is evolving') }}"></div>
+        {% endif %}
+      </div>
+
+      {% if char.summary %}
+      <div class="char-profile-summary">{{ char.summary }}</div>
+      {% endif %}
+
+      {% if char.fields %}
+      <div class="char-profile-fields">
+        {% for field in char.fields %}
+        <div class="char-field-row">
+          <span class="char-field-label">{{ field.label }}</span>
+          <span class="char-field-value">{{ field.value }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if char.tags %}
+      <div class="char-profile-tags">
+        {% for tag in char.tags %}
+        <span class="char-tag-chip">
+          <span class="char-tag-key">{{ tag.label }}</span>
+          <span class="char-tag-val">{{ tag.value }}</span>
+        </span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if char.changes and char.changes|length > 1 %}
+      <details class="char-evolution">
+        <summary class="char-evolution-toggle">
+          <span>{{ ui_text('章节演变', 'Chapter evolution') }}</span>
+          <span class="char-evolution-count">{{ char.change_count }} {{ ui_text('个节点', 'points') }}</span>
+        </summary>
+        <div class="char-evolution-timeline">
+          {% for change in char.changes %}
+          <div class="char-timeline-node">
+            <div class="char-timeline-marker"></div>
+            <div class="char-timeline-body">
+              <div class="char-timeline-head">
+                {% if change.chapter %}
+                <span class="char-chapter-badge">{{ ui_text('第', 'Ch.') }}{{ change.chapter }}{{ ui_text('章', '') }}</span>
+                {% endif %}
+                {% if change.timestamp %}
+                <span class="char-time-badge">{{ change.timestamp[:16] if change.timestamp|length > 16 else change.timestamp }}</span>
+                {% endif %}
+              </div>
+              {% if change.summary %}
+              <div class="char-timeline-text">{{ change.summary }}</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+      {% endif %}
+
+      {% if char.raw_text %}
+      <details class="char-raw-toggle">
+        <summary>{{ ui_text('原始记录', 'Raw entry') }}</summary>
+        <div class="char-raw-body">{{ char.raw_text }}</div>
+      </details>
+      {% endif %}
+
+    </article>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="chars-empty">
+    <div class="chars-empty-icon">✦</div>
+    <h2>{{ ui_text('还没有角色档案', 'No character profiles yet') }}</h2>
+    <p>{{ ui_text('等 Claw 执行 enrich_character 或 sync_characters 后，角色档案会出现在这里。每个角色作为独立档案存在，随章节推进更新状态。', 'Character profiles appear here after Claw runs enrich_character or sync_characters. Each character lives as an independent profile that updates with each chapter.') }}</p>
+    <div class="chars-empty-actions">
+      <a href="/console/chat{% if active_session %}?session_id={{ active_session.id }}{% endif %}" class="chars-action-btn chars-action-btn--primary">{{ ui_text('去对话', 'Go to chat') }}</a>
+      <a href="/console/skills" class="chars-action-btn">{{ ui_text('查看技能', 'View skills') }}</a>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

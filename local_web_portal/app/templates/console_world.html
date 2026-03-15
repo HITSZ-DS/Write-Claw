@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_text('世界观', 'World') }} | WriteClaw{% endblock %}
+{% block content %}
+<div class="pg-root pg-root-fluid world-page">
+
+  <div class="world-header">
+    <div>
+      <div class="world-header-kicker">{{ ui_text('14 世界观', '14 World') }}</div>
+      <h1>{{ ui_text('世界设定与事实', 'World Settings & Facts') }}</h1>
+      <p>{{ ui_text('Claw 当前掌握的世界设定卡与连续性事实。这些信息会在每次写作时被引用。', 'World settings and continuity facts Claw knows and references every time it writes.') }}</p>
+    </div>
+    <div class="world-header-actions">
+      <a class="btn btn-outline btn-xs" href="/console/chat{% if active_session %}?session_id={{ active_session.id }}{% endif %}">{{ ui_text('返回对话', 'Back to chat') }}</a>
+    </div>
+  </div>
+
+  <div class="pg-stats pg-stats-fluid" style="margin-bottom:22px;">
+    <div class="pg-stat">
+      <span class="pg-stat-label">{{ ui_text('设定卡', 'Settings') }}</span>
+      <span class="pg-stat-value {% if world_view.settings %}ok{% endif %}">{{ world_view.settings|length }}</span>
+    </div>
+    <div class="pg-stat">
+      <span class="pg-stat-label">{{ ui_text('事实卡', 'Facts') }}</span>
+      <span class="pg-stat-value {% if world_view.facts %}ok{% endif %}">{{ world_view.facts|length }}</span>
+    </div>
+    <div class="pg-stat">
+      <span class="pg-stat-label">world_state</span>
+      <span class="pg-stat-value {% if memory_overview.claw_counts.world_state %}ok{% endif %}">{{ memory_overview.claw_counts.world_state if memory_overview.claw_counts.world_state else 0 }}</span>
+    </div>
+    <div class="pg-stat">
+      <span class="pg-stat-label">continuity_facts</span>
+      <span class="pg-stat-value {% if memory_overview.claw_counts.continuity_facts %}ok{% endif %}">{{ memory_overview.claw_counts.continuity_facts if memory_overview.claw_counts.continuity_facts else 0 }}</span>
+    </div>
+  </div>
+
+  <div class="pg-grid pg-grid-world">
+    <section class="pg-card world-panel">
+      <div class="pg-card-head">
+        <span class="pg-card-title">{{ ui_text('世界设定', 'World Settings') }}</span>
+        <span class="pg-card-badge {% if world_view.settings %}ok{% endif %}">{{ world_view.settings|length }}</span>
+      </div>
+      <div class="pg-card-body world-panel-body">
+        {% for item in world_view.settings %}
+        <article class="world-setting-card world-entry-card">
+          <div class="world-card-title">{{ item.title }}</div>
+          {% if item.timestamp %}<div class="world-card-meta">{{ item.timestamp }}</div>{% endif %}
+          <div class="world-card-body">{{ item.summary }}</div>
+          {% if item.fields %}
+          <div class="world-field-grid">
+            {% for field in item.fields %}
+            <div class="world-field-row">
+              <span>{{ field.label }}</span>
+              <strong>{{ field.value }}</strong>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if item.raw_text %}
+          <details class="pg-raw-toggle">
+            <summary>{{ ui_text('原始记录', 'Raw') }}</summary>
+            <div class="pg-raw-body">{{ item.raw_text }}</div>
+          </details>
+          {% endif %}
+        </article>
+        {% else %}
+        <div class="pg-empty">{{ ui_text('等 Claw 执行 enrich_world / sync_world 后出现。', 'Appears after Claw runs enrich_world / sync_world.') }}</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="pg-card world-panel">
+      <div class="pg-card-head">
+        <span class="pg-card-title">{{ ui_text('连续性事实', 'Continuity Facts') }}</span>
+        <span class="pg-card-badge {% if world_view.facts %}green{% endif %}">{{ world_view.facts|length }}</span>
+      </div>
+      <div class="pg-card-body world-panel-body">
+        {% for item in world_view.facts %}
+        <article class="world-fact-card world-entry-card">
+          {% if item.type %}<div class="world-card-type">{{ item.type }}</div>{% endif %}
+          <div class="world-card-title">{{ item.title }}</div>
+          <div class="world-card-body">{{ item.summary }}</div>
+          {% if item.raw_text %}
+          <details class="pg-raw-toggle">
+            <summary>{{ ui_text('原始记录', 'Raw') }}</summary>
+            <div class="pg-raw-body">{{ item.raw_text }}</div>
+          </details>
+          {% endif %}
+        </article>
+        {% else %}
+        <div class="pg-empty">{{ ui_text('暂时还没有事实卡片。', 'No fact cards yet.') }}</div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <section class="pg-card world-bank-panel" style="margin-top:20px;">
+    <div class="pg-card-head">
+      <span class="pg-card-title">{{ ui_text('记忆库', 'Memory Banks') }}</span>
+    </div>
+    <div class="pg-card-body">
+      <div class="mem-bank-strip mem-bank-strip-fluid">
+        {% for slug in ['world_state', 'continuity_facts', 'tool_observations'] %}
+        {% set n = memory_overview.claw_counts.get(slug, 0) if memory_overview.claw_counts else 0 %}
+        <div class="mem-bank-chip {% if n %}has-data{% endif %}">
+          <code>{{ slug }}</code>
+          <strong>{{ n }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

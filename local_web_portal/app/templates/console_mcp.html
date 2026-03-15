@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}MCP | WriteClaw{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>MCP</h1>
+  <p>{{ ui_text('诚实告知：哪些能力现在就由内部 Claw 工具链承担，哪些是计划中的外部 MCP 连接器。没有假装"已全部接好"，数据驱动地展示当前真实状态。', 'Honest status: what is already handled by the internal Claw toolchain, and what is a planned external MCP connector. No pretending — data-driven view of the current real state.') }}</p>
+</section>
+
+{# Stats bar #}
+<section class="status-card-grid" style="margin-bottom: 24px;">
+  <div class="status-metric-card ok">
+    <span>{{ ui_text('已启用本地工具', 'Enabled Local Tools') }}</span>
+    <strong>{{ mcp_surface.enabled_local_tools | length }}</strong>
+  </div>
+  <div class="status-metric-card ok">
+    <span>{{ ui_text('已配置 Provider', 'Configured Providers') }}</span>
+    <strong>{{ mcp_surface.provider_count }}</strong>
+  </div>
+  <div class="status-metric-card">
+    <span>{{ ui_text('有数据的 Memory Bank', 'Memory Banks with Data') }}</span>
+    <strong>{{ mcp_surface.memory_ready_banks }}</strong>
+  </div>
+  <div class="status-metric-card">
+    <span>{{ ui_text('外部连接器（计划中）', 'External Connectors (Planned)') }}</span>
+    <strong>{{ mcp_surface.external_connectors | length }}</strong>
+  </div>
+</section>
+
+{# Internal tools — already live #}
+<section style="margin-bottom: 28px;">
+  <div class="assistant-title" style="margin-bottom: 12px; font-size: 13px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .06em;">
+    {{ ui_text('现在已由内部 Claw 工具链承担', 'Currently Handled by Internal Claw Toolchain') }}
+  </div>
+
+  {# Core always-on tools #}
+  {% set core_tools = capability_catalog | selectattr('always_enabled') | list %}
+  {% if core_tools %}
+  <div class="assistant-title" style="font-size: 11px; color: #22c55e; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .06em;">
+    ● {{ ui_text('核心常开', 'Core Always-On') }}
+  </div>
+  <div class="card-stack" style="margin-bottom: 16px;">
+    {% for item in core_tools %}
+    <article class="connector-card connector-status-live" style="border-radius: 12px; border: 1px solid rgba(34,197,94,0.35); background: #f0fdf4; padding: 14px 16px; display: grid; gap: 6px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e;"></span>
+          <strong style="font-size: 14px;">{{ item.name }}</strong>
+          <code style="font-size: 11px; background: rgba(34,197,94,0.12); border-radius: 4px; padding: 1px 6px; color: #15803d;">{{ item.slug }}</code>
+        </div>
+        <span class="slim-pill" style="background: rgba(34,197,94,0.15); color: #15803d; font-size: 11px;">{{ ui_text('常开', 'Always On') }}</span>
+      </div>
+      <div class="assistant-text" style="font-size: 12px; color: #4a5568;">{{ item.description }}</div>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# Enabled claw tools #}
+  {% set active_tools = capability_catalog | selectattr('enabled') | rejectattr('always_enabled') | selectattr('manager_action') | list %}
+  {% if active_tools %}
+  <div class="assistant-title" style="font-size: 11px; color: #6558f5; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .06em;">
+    ● {{ ui_text('已启用 Claw 工具', 'Enabled Claw Tools') }}
+  </div>
+  <div class="card-stack" style="margin-bottom: 16px;">
+    {% for item in active_tools %}
+    <article class="connector-card connector-status-live" style="border-radius: 12px; border: 1px solid rgba(101,88,245,0.25); background: #faf8ff; padding: 14px 16px; display: grid; gap: 6px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #6558f5;"></span>
+          <strong style="font-size: 14px;">{{ item.name }}</strong>
+          {% if item.manager_action %}<code style="font-size: 11px; background: rgba(101,88,245,0.1); border-radius: 4px; padding: 1px 6px; color: #6558f5;">{{ item.manager_action }}</code>{% endif %}
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <span class="slim-pill" style="background: rgba(101,88,245,0.12); color: #6558f5; font-size: 11px;">{{ item.category }}</span>
+          <span class="slim-pill" style="background: rgba(101,88,245,0.12); color: #6558f5; font-size: 11px;">{{ ui_text('已启用', 'Enabled') }}</span>
+        </div>
+      </div>
+      <div class="assistant-text" style="font-size: 12px; color: #4a5568;">{{ item.description }}</div>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# Disabled tools #}
+  {% set disabled_tools = capability_catalog | rejectattr('enabled') | rejectattr('always_enabled') | list %}
+  {% if disabled_tools %}
+  <div class="assistant-title" style="font-size: 11px; color: #9aa3b0; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .06em;">
+    ○ {{ ui_text('已禁用（Loop 中不可用）', 'Disabled (Not Available in Loop)') }}
+  </div>
+  <div class="card-stack" style="margin-bottom: 4px;">
+    {% for item in disabled_tools %}
+    <article style="border-radius: 12px; border: 1px solid #e7ebf1; background: #fafafa; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+      <div style="min-width: 0;">
+        <div style="font-size: 13px; font-weight: 700; color: #9aa3b0; margin-bottom: 2px;">{{ item.name }}</div>
+        {% if item.manager_action %}<code style="font-size: 10px; color: #c0c8d4;">{{ item.manager_action }}</code>{% endif %}
+      </div>
+      <a href="/console/skills" class="mini-btn" style="flex-shrink: 0; font-size: 11px;">{{ ui_text('去启用', 'Enable') }}</a>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+{# External connectors — future #}
+<section style="margin-bottom: 28px;">
+  <div class="assistant-title" style="margin-bottom: 12px; font-size: 13px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .06em;">
+    {{ ui_text('未来外部 MCP 连接器（计划中）', 'Future External MCP Connectors (Planned)') }}
+  </div>
+  <div class="card-stack">
+    {% for item in mcp_surface.external_connectors %}
+    <article class="connector-card connector-status-future" style="border-radius: 12px; border: 1px solid #e7ebf1; background: #fafafa; padding: 14px 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+      <div style="min-width: 0; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #d1d5db;"></span>
+          <strong style="font-size: 14px; color: #6b7280;">{{ item.name }}</strong>
+        </div>
+        <div class="assistant-text" style="font-size: 12px; color: #9aa3b0;">{{ item.detail }}</div>
+      </div>
+      <span class="slim-pill" style="background: #f0f2f5; color: #9aa3b0; font-size: 11px; flex-shrink: 0;">{{ item.status }}</span>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+{# Memory context #}
+<section class="console-card compact" style="margin-bottom: 24px;">
+  <div class="console-card-title" style="margin-bottom: 10px;">{{ ui_text('动态记忆与工具链的关系', 'Dynamic Memory & Toolchain Relationship') }}</div>
+  <div class="assistant-text" style="font-size: 13px; color: #4a5568; margin-bottom: 12px;">
+    {{ ui_text('WriteClaw 当前的 MCP-like 能力完全由内部工具链承担：LLM → function call → 本地 sync 工具 → memory bank 写入。不依赖外部 MCP server；外部连接器（浏览器、发布平台）是未来扩展方向。', 'WriteClaw\'s current MCP-like capabilities are fully handled internally: LLM → function call → local sync tools → memory bank writes. No external MCP server required; external connectors (browser, publish) are future extensions.') }}
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;">
+    {% for card in memory_bank_cards %}
+    <div style="border-radius: 8px; border: 1px solid {% if card.count %}rgba(101,88,245,0.2){% else %}#e7ebf1{% endif %}; background: {% if card.count %}#faf8ff{% else %}#fafafa{% endif %}; padding: 10px 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <span style="font-size: 12px; font-weight: 700; color: {% if card.count %}#6558f5{% else %}#9aa3b0{% endif %};">{{ card.name }}</span>
+        <span style="font-size: 11px; font-weight: 700; color: {% if card.count %}#6558f5{% else %}#c0c8d4{% endif %};">{{ card.count }}</span>
+      </div>
+      <div style="font-size: 11px; color: #9aa3b0; line-height: 1.4;">{{ card.description }}</div>
+      {% if card.latest_preview %}
+      <div style="font-size: 10px; color: #b0b8c4; margin-top: 6px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ card.latest_preview }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <div class="row-meta" style="margin-top: 14px; font-size: 11px;"><code>{{ memory_overview.index_path }}</code></div>
+</section>
+{% endblock %}

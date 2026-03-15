@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_texts.models_page_title }} | WriteClaw{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>{{ ui_texts.models_page_title }}</h1>
+  <p>{{ ui_texts.models_page_desc }}</p>
+</section>
+
+<section class="workspace-grid">
+  <article class="workspace-panel">
+    <div class="panel-head">
+      <h3>{{ ui_texts.models_heading_providers }}</h3>
+      <span class="mini-badge">{{ model_overview.providers|length }}</span>
+    </div>
+    <div class="file-list">
+      {% for item in model_overview.providers %}
+      <div class="file-item vertical">
+        <div class="file-name">{{ item.label }}</div>
+        <div class="row-meta">{{ item.slug }} | {{ item.model }} | {{ item.wire_api }}</div>
+        <div class="row-meta">{{ item.base_url }}</div>
+        <div class="row-meta">{{ ui_texts.models_api_key_label }} {{ item.key_hint }}</div>
+        <div class="row-actions-inline">
+          <span class="slim-pill">{{ ui_texts.models_saved if item.has_key else ui_texts.models_not_saved }}</span>
+          {% if item.is_custom %}
+          <form method="post" action="/providers/{{ item.slug }}/delete" class="inline-form">
+            <button type="submit" class="mini-btn danger">{{ ui_texts.models_delete_provider }}</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-note">{{ ui_texts.models_no_providers }}</div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="workspace-panel">
+    <div class="panel-head">
+      <h3>{{ ui_texts.models_save_api_key }}</h3>
+    </div>
+    <form method="post" action="/api-keys" class="form-stack">
+      <select name="provider" required>
+        <option value="">{{ ui_texts.models_select_provider }}</option>
+        {% for item in model_overview.providers %}
+        <option value="{{ item.slug }}">{{ item.label }} ({{ item.slug }})</option>
+        {% endfor %}
+      </select>
+      <input type="password" name="api_key" required placeholder="{{ ui_texts.models_enter_api_key }}" autocomplete="off">
+      <button type="submit" class="primary-btn">{{ ui_texts.models_save_api_key }}</button>
+    </form>
+    <div class="row-meta">{{ ui_texts.models_api_key_note }}</div>
+  </article>
+
+  <article class="workspace-panel">
+    <div class="panel-head">
+      <h3>{{ ui_texts.models_provider_form }}</h3>
+    </div>
+    <form method="post" action="/providers" class="form-stack">
+      <input type="text" name="slug" required placeholder="{{ ui_texts.models_slug_placeholder }}">
+      <input type="text" name="label" placeholder="{{ ui_texts.models_label_placeholder }}">
+      <input type="text" name="base_url" required placeholder="{{ ui_texts.models_base_url_placeholder }}">
+      <input type="text" name="model" required placeholder="{{ ui_texts.models_model_placeholder }}">
+      <select name="wire_api">
+        <option value="chat">chat</option>
+        <option value="responses">responses</option>
+      </select>
+      <button type="submit" class="primary-btn">{{ ui_texts.models_save_provider }}</button>
+    </form>
+  </article>
+</section>
+{% endblock %}

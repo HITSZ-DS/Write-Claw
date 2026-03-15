@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_text('Sessions', 'Sessions') }} | WriteClaw{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>{{ ui_text('Sessions', 'Sessions') }}</h1>
+  <p>{{ ui_text('Manage writing sessions, idea rounds, and evolving briefs.', 'Manage writing sessions, idea rounds, and evolving briefs.') }}</p>
+</section>
+<div class="page-actions">
+  <a href="/console/chat#new-session-form" class="primary-btn secondary">{{ ui_text('New conversation', 'New conversation') }}</a>
+  <a href="/console/sessions" class="ghost-btn">{{ ui_text('Refresh sessions', 'Refresh sessions') }}</a>
+</div>
+<section class="list-page">
+  {% if idea_sessions %}
+    {% for s in idea_sessions %}
+    {% set spec = provider_specs.get(s.provider) %}
+    <article class="list-row-card vertical">
+      <div>
+        <h3>{{ s.refined_idea[:48] if s.refined_idea else s.original_idea[:48] if s.original_idea else ui_text('New writing session', 'New writing session') }}{% if (s.refined_idea or s.original_idea or '')|length > 48 %}...{% endif %}</h3>
+        <div class="row-meta">{{ spec.label if spec else s.provider|upper }} | {{ s.updated_at.strftime("%Y/%m/%d %H:%M:%S") }} | {{ s.round_count }} {{ ui_text('rounds', 'rounds') }}</div>
+      </div>
+      <div class="row-actions-inline">
+        <span class="slim-pill">#{{ s.id }}</span>
+        <span class="slim-pill">{{ s.status }}</span>
+        <a href="/console/chat?session_id={{ s.id }}" class="mini-btn primary">{{ ui_text('Continue', 'Continue') }}</a>
+        <a href="/idea-copilot/{{ s.id }}" class="mini-btn">{{ ui_text('Details', 'Details') }}</a>
+        <form method="post" action="/idea-copilot/{{ s.id }}/cancel" class="inline-form" onsubmit="return confirm('{{ ui_text('Close this writing session?', 'Close this writing session?') }}');">
+          <button type="submit" class="mini-btn">{{ ui_text('Close', 'Close') }}</button>
+        </form>
+        <form method="post" action="/idea-copilot/{{ s.id }}/delete" class="inline-form" onsubmit="return confirm('{{ ui_text('Delete this writing session? This cannot be undone.', 'Delete this writing session? This cannot be undone.') }}');">
+          <input type="hidden" name="next" value="/console/sessions">
+          <button type="submit" class="mini-btn danger">{{ ui_text('Delete', 'Delete') }}</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  {% else %}
+  <div class="empty-panel">{{ ui_text('No sessions yet.', 'No sessions yet.') }}</div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_text('Agent 配置', 'Agent Config') }} | WriteClaw{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>{{ ui_text('Agent 配置', 'Agent Config') }}</h1>
+  <p>{{ ui_text('这不是一张 agent 名单墙。这是 OpenClaw ReAct 循环的真实可调用面：你可以看到每个 sub-agent 的角色、当前数据支撑情况，以及它在 loop 中是否正被真实数据激活。', 'Not a name wall — this is the real callable surface of the OpenClaw ReAct loop. See each sub-agent\'s role, how much data backs it, and whether it is currently live.') }}</p>
+</section>
+
+{# Stats bar #}
+<section class="status-card-grid" style="margin-bottom: 24px;">
+  <div class="status-metric-card ok">
+    <span>{{ ui_text('执行模式', 'Execution Mode') }}</span>
+    <strong>{{ claw_config.execution_mode }}</strong>
+  </div>
+  <div class="status-metric-card ok">
+    <span>{{ ui_text('最大步数限制', 'Max Steps (Safety)') }}</span>
+    <strong>{{ claw_config.max_steps }}</strong>
+  </div>
+  <div class="status-metric-card">
+    <span>{{ ui_text('已启用 Claw 工具', 'Enabled Claw Tools') }}</span>
+    <strong>{{ capability_catalog | selectattr('enabled') | selectattr('manager_action') | list | length }}</strong>
+  </div>
+  <div class="status-metric-card">
+    <span>{{ ui_text('活跃 Agent 数', 'Live Agents') }}</span>
+    <strong>{{ agent_runtime | selectattr('evidence_count') | list | length }}</strong>
+  </div>
+</section>
+
+{# ReAct loop diagram #}
+<section class="console-card compact" style="margin-bottom: 24px;">
+  <div class="console-card-title" style="margin-bottom: 12px;">{{ ui_text('OpenClaw ReAct Loop 结构', 'OpenClaw ReAct Loop Architecture') }}</div>
+  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted);">
+    <span class="slim-pill" style="background: rgba(101,88,245,0.12); color: #6558f5; font-weight: 700;">LLM ({{ claw_config.execution_mode }})</span>
+    <span style="color: #aaa;">→ function_call →</span>
+    <span class="slim-pill" style="background: rgba(34,197,94,0.1); color: #15803d;">Tool Executor</span>
+    <span style="color: #aaa;">→ tool result →</span>
+    <span class="slim-pill" style="background: rgba(101,88,245,0.12); color: #6558f5; font-weight: 700;">LLM</span>
+    <span style="color: #aaa;">→ … until →</span>
+    <span class="slim-pill" style="background: rgba(239,68,68,0.1); color: #dc2626;">finalize / max_steps</span>
+  </div>
+  <div class="assistant-text" style="margin-top: 12px; font-size: 13px;">
+    {{ ui_text('LLM 是唯一决策者。它接收完整 context + 工具定义，调用 function call，结果作为 tool message 送回，进入下一轮推理。步数上限只是安全阀；LLM 通过调用 finalize 工具自主结束 loop。', 'The LLM is the sole decision-maker. It receives the full context + tool definitions, makes a function call, gets the result back as a tool message, and continues reasoning. Max steps is only a safety limit — the LLM exits the loop by calling the finalize tool.') }}
+  </div>
+  <div style="margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
+    {% for item in capability_catalog if item.enabled and item.manager_action %}
+    <code style="font-size: 11px; background: #f0f2f5; border-radius: 5px; padding: 2px 8px; color: #4a5568;">{{ item.manager_action }}</code>
+    {% endfor %}
+    {% if not (capability_catalog | selectattr('enabled') | selectattr('manager_action') | list) %}
+    <span class="muted">{{ ui_text('暂无启用工具 — 去 Skills 页面启用', 'No enabled tools — enable some on the Skills page') }}</span>
+    {% endif %}
+  </div>
+</section>
+
+{# Enabled capabilities fast-view #}
+<section style="margin-bottom: 24px;">
+  <div class="assistant-title" style="margin-bottom: 10px; font-size: 13px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .06em;">
+    {{ ui_text('当前 Loop 可调用工具', 'Tools Available in Current Loop') }}
+  </div>
+  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+    {% for item in capability_catalog %}
+    <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; font-size: 12px; border: 1px solid {% if item.always_enabled %}rgba(34,197,94,0.4){% elif item.enabled %}rgba(101,88,245,0.3){% else %}#e7ebf1{% endif %}; background: {% if item.always_enabled %}#f0fdf4{% elif item.enabled %}#faf8ff{% else %}#f9f9f9{% endif %}; color: {% if item.enabled or item.always_enabled %}#1a1a2e{% else %}#9aa3b0{% endif %};">
+      <span style="width: 6px; height: 6px; border-radius: 50%; background: {% if item.always_enabled %}#22c55e{% elif item.enabled %}#6558f5{% else %}#d1d5db{% endif %}; flex-shrink: 0;"></span>
+      <span style="font-weight: {% if item.enabled or item.always_enabled %}700{% else %}400{% endif %};">{{ item.name }}</span>
+      {% if item.manager_action %}<code style="font-size: 10px; opacity: 0.7;">{{ item.manager_action }}</code>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+{# Agent cards #}
+<div class="assistant-title" style="margin-bottom: 12px; font-size: 13px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .06em;">
+  {{ ui_text('Sub-Agent 详情', 'Sub-Agent Details') }}
+</div>
+<section class="module-card-grid two-col" style="margin-bottom: 28px;">
+  {% for item in agent_runtime %}
+  <article class="module-card {% if item.evidence_count %}is-live{% endif %}" style="border-radius: 14px; border: 1px solid {% if item.evidence_count %}rgba(101,88,245,0.25){% else %}#e7ebf1{% endif %}; background: {% if item.evidence_count %}#faf8ff{% else %}#fafafa{% endif %}; padding: 16px 18px;">
+    <div class="module-card-head" style="margin-bottom: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: {% if item.evidence_count %}#6558f5{% else %}#d1d5db{% endif %}; flex-shrink: 0;" title="{{ ui_text('活跃', 'Live') if item.evidence_count else ui_text('待触发', 'Idle') }}"></span>
+        <div>
+          <div class="module-card-title" style="font-size: 14px; font-weight: 800;">{{ item.name }}</div>
+          <div class="row-meta" style="font-size: 11px;">{{ item.role }}</div>
+        </div>
+      </div>
+      <span class="slim-pill" style="background: {% if item.evidence_count %}rgba(101,88,245,0.12){% else %}#f0f2f5{% endif %}; color: {% if item.evidence_count %}#6558f5{% else %}#9aa3b0{% endif %}; font-size: 11px;">
+        {{ item.status }}
+      </span>
+    </div>
+    <div class="assistant-text" style="font-size: 13px; color: #4a5568; margin-bottom: 10px;">{{ item.description }}</div>
+    <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #f0f0f5; padding-top: 10px; margin-top: 4px;">
+      <span style="font-size: 11px; color: var(--muted);">{{ ui_text('运行证据', 'Runtime Evidence') }}</span>
+      <strong style="font-size: 13px; color: {% if item.evidence_count %}#6558f5{% else %}#9aa3b0{% endif %};">{{ item.evidence_count }}</strong>
+    </div>
+  </article>
+  {% endfor %}
+</section>
+
+{# How routing works #}
+<section class="console-card compact">
+  <div class="console-card-title" style="margin-bottom: 10px;">{{ ui_text('路由逻辑说明', 'How Routing Works') }}</div>
+  <ul class="workspace-notes compact" style="font-size: 13px; color: #4a5568; margin: 0; padding-left: 18px; display: grid; gap: 6px;">
+    <li>{{ ui_text('LLM 每步拿到完整消息历史 + 所有已启用工具的 JSON schema，自主选择下一步调用。', 'Each step the LLM receives the full message history + JSON schema for all enabled tools, and autonomously chooses the next call.') }}</li>
+    <li>{{ ui_text('步数上限（当前 {{ claw_config.max_steps }} 步）是安全阀，不是流程控制：LLM 应当自行调用 finalize 来结束 loop。', 'Max steps (currently {{ claw_config.max_steps }}) is a safety limit, not a controller — the LLM should call finalize on its own to end the loop.') }}</li>
+    <li>{{ ui_text('在 Skills 页禁用某个能力后，对应 tool schema 将从下一轮 loop 的 function 列表中移除，LLM 不再有机会调用它。', 'Disabling a capability on the Skills page removes its tool schema from the next loop\'s function list — the LLM can no longer call it.') }}</li>
+    <li>{{ ui_text('ask_user 工具允许 LLM 在 loop 中途暂停并在对话窗口向你提问，你的回复会作为 tool result 送回 LLM。', 'The ask_user tool lets the LLM pause mid-loop and ask you a question in the chat window; your reply is sent back as a tool result.') }}</li>
+  </ul>
+</section>
+{% endblock %}

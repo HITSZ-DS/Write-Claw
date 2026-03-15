@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Register | WriteClaw{% endblock %}
+{% block content %}
+<section class="auth-wrap">
+  <article class="auth-hero">
+    <div>
+      <div class="auth-hero-badge">WriteClaw Studio</div>
+      <h1>Create a dedicated console for your writing stack.</h1>
+      <p>Each user gets isolated providers, sessions, jobs, and history so the project can grow into a real product.</p>
+    </div>
+    <div>
+      <ul>
+        <li>User-level provider and key isolation</li>
+        <li>Traceable jobs and run ids</li>
+        <li>Ready for future team collaboration and permissions</li>
+      </ul>
+    </div>
+  </article>
+  <article class="auth-card">
+    <h1>Create account</h1>
+    <p class="muted">After registering, you can configure models and start writing runs.</p>
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+    <form method="post" action="/register" class="form-stack">
+      <div><label>Email</label><input type="email" name="email" required placeholder="you@example.com"></div>
+      <div><label>Password</label><input type="password" name="password" required placeholder="At least 8 characters"></div>
+      <div><label>Confirm password</label><input type="password" name="confirm_password" required placeholder="Type the password again"></div>
+      <button type="submit" class="btn btn-primary">Create Account</button>
+    </form>
+    <p class="auth-footnote">Already have an account? <a href="/login">Log in</a></p>
+  </article>
+</section>
+{% endblock %}

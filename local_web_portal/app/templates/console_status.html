@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_text('系统状态', 'System Status') }} | WriteClaw{% endblock %}
+{% block content %}
+<section class="page-head status-hero">
+  <div class="status-hero-copy">
+    <span class="workspace-eyebrow">{{ ui_text('控制面板', 'Control Surface') }}</span>
+    <h1>{{ ui_text('系统状态', 'System Status') }}</h1>
+    <p>{{ ui_text('统一查看运行模式、模型可用性、记忆密度、会话活跃度和最近任务，不再只给一个空白数字面板。', 'Review runtime mode, model availability, memory density, session activity, and recent jobs in one place instead of a blank metric strip.') }}</p>
+  </div>
+  <div class="status-hero-actions">
+    <a href="/console/status" class="btn btn-primary">{{ ui_text('刷新状态', 'Refresh Status') }}</a>
+    <a href="/console/chat{% if active_session %}?session_id={{ active_session.id }}{% endif %}" class="btn btn-outline">{{ ui_text('回到聊天工作台', 'Back to Chat Workspace') }}</a>
+  </div>
+</section>
+
+<section class="status-spotlight-grid">
+  <article class="status-spotlight-card status-spotlight-card-runtime">
+    <span>{{ ui_text('运行模式', 'Execution Mode') }}</span>
+    <strong>{{ status_summary.agent_mode }}</strong>
+    <small>{{ ui_text('当前 Claw loop 调度方式', 'Current Claw loop orchestration mode') }}</small>
+  </article>
+  <article class="status-spotlight-card status-spotlight-card-health">
+    <span>{{ ui_text('API 健康', 'API Health') }}</span>
+    <strong>{{ status_summary.api_health }}</strong>
+    <small>{{ ui_text('模型接入与密钥状态汇总', 'Provider and credential readiness summary') }}</small>
+  </article>
+  <article class="status-spotlight-card status-spotlight-card-memory">
+    <span>{{ ui_text('动态记忆活跃 Bank', 'Active Dynamic Banks') }}</span>
+    <strong>{{ status_summary.tool_count }}</strong>
+    <small>{{ ui_text('当前 run 中已有内容的 bank 数量', 'Banks that already contain entries in the active run') }}</small>
+  </article>
+  <article class="status-spotlight-card status-spotlight-card-jobs">
+    <span>{{ ui_text('运行中任务', 'Running Jobs') }}</span>
+    <strong>{{ status_summary.running_jobs }}</strong>
+    <small>{{ ui_text('当前仍处于 queued / running 的任务数', 'Jobs still in queued or running state') }}</small>
+  </article>
+</section>
+
+<section class="status-dashboard-grid">
+  <article class="workspace-panel status-panel">
+    <div class="panel-head">
+      <div>
+        <span class="workspace-section-kicker">{{ ui_text('概览', 'Overview') }}</span>
+        <h3>{{ ui_text('运行总览', 'Runtime Overview') }}</h3>
+      </div>
+    </div>
+    <div class="status-kpi-grid">
+      <div class="status-kpi-card">
+        <span>{{ ui_text('最大步数', 'Max Steps') }}</span>
+        <strong>{{ status_summary.claw_max_steps }}</strong>
+      </div>
+      <div class="status-kpi-card">
+        <span>{{ ui_text('活跃会话', 'Active Sessions') }}</span>
+        <strong>{{ status_summary.active_sessions }}</strong>
+      </div>
+      <div class="status-kpi-card">
+        <span>{{ ui_text('章节产出', 'Chapter Outputs') }}</span>
+        <strong>{{ status_summary.chapter_outputs }}</strong>
+      </div>
+      <div class="status-kpi-card">
+        <span>{{ ui_text('总记忆条目', 'Memory Items') }}</span>
+        <strong>{{ status_summary.memory_count }}</strong>
+      </div>
+      <div class="status-kpi-card">
+        <span>{{ ui_text('角色卡', 'Character Cards') }}</span>
+        <strong>{{ status_summary.characters }}</strong>
+      </div>
+      <div class="status-kpi-card">
+        <span>{{ ui_text('世界设定', 'World Facts') }}</span>
+        <strong>{{ status_summary.world_facts }}</strong>
+      </div>
+    </div>
+  </article>
+
+  <article class="workspace-panel status-panel">
+    <div class="panel-head">
+      <div>
+        <span class="workspace-section-kicker">{{ ui_text('模型面', 'Model Surface') }}</span>
+        <h3>{{ ui_text('提供商状态', 'Provider Status') }}</h3>
+      </div>
+      <span class="mini-badge">{{ model_overview.providers|length }}</span>
+    </div>
+    <div class="status-provider-list">
+      {% for provider in model_overview.providers %}
+      <article class="status-provider-card">
+        <div class="status-provider-head">
+          <strong>{{ provider.label }}</strong>
+          <span class="mini-badge{% if provider.has_key %} status-badge-ok{% else %} status-badge-muted{% endif %}">{{ ui_text('已保存 Key', 'Key saved') if provider.has_key else ui_text('未保存 Key', 'Key missing') }}</span>
+        </div>
+        <div class="row-meta">{{ provider.slug }} · {{ provider.model if provider.model else '-' }}</div>
+        <div class="status-provider-meta">
+          <span>{{ ui_text('接口', 'Wire') }}: {{ provider.wire_api }}</span>
+          <span>{{ ui_text('URL', 'URL') }}: {{ provider.base_url if provider.base_url else '-' }}</span>
+        </div>
+      </article>
+      {% else %}
+      <div class="empty-note">{{ ui_text('还没有可用提供商。', 'No providers configured yet.') }}</div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="workspace-panel status-panel">
+    <div class="panel-head">
+      <div>
+        <span class="workspace-section-kicker">{{ ui_text('任务面', 'Job Surface') }}</span>
+        <h3>{{ ui_text('最近任务', 'Recent Jobs') }}</h3>
+      </div>
+      <span class="mini-badge">{{ jobs|length }}</span>
+    </div>
+    <div class="status-job-list">
+      {% for job in jobs[:8] %}
+      <article class="status-job-card status-job-card-{{ job.status }}">
+        <div class="status-job-head">
+          <strong>#{{ job.id }}</strong>
+          <span class="mini-badge">{{ job.status }}</span>
+        </div>
+        <div class="row-meta">{{ job.provider|upper }} · {{ job.run_id if job.run_id else '-' }}</div>
+        <div class="module-snippet">{{ job.idea[:220] ~ ('...' if job.idea and job.idea|length > 220 else '') }}</div>
+        {% if job.error_message %}
+        <div class="status-inline-error">{{ job.error_message[:220] ~ ('...' if job.error_message|length > 220 else '') }}</div>
+        {% endif %}
+      </article>
+      {% else %}
+      <div class="empty-note">{{ ui_text('还没有任务记录。', 'No jobs yet.') }}</div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="workspace-panel status-panel">
+    <div class="panel-head">
+      <div>
+        <span class="workspace-section-kicker">{{ ui_text('会话面', 'Session Surface') }}</span>
+        <h3>{{ ui_text('最近会话', 'Recent Sessions') }}</h3>
+      </div>
+      <span class="mini-badge">{{ idea_sessions|length }}</span>
+    </div>
+    <div class="status-session-list">
+      {% for session in idea_sessions[:6] %}
+      <article class="status-session-card">
+        <div class="status-job-head">
+          <strong>#{{ session.id }}</strong>
+          <span class="mini-badge">{{ session.status }}</span>
+        </div>
+        <div class="row-meta">{{ session.provider|upper }} · {{ ui_text('轮次', 'Rounds') }} {{ session.round_count }}</div>
+        <div class="module-snippet">{{ session.refined_idea if session.refined_idea else session.original_idea }}</div>
+      </article>
+      {% else %}
+      <div class="empty-note">{{ ui_text('还没有会话。', 'No sessions yet.') }}</div>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+{% endblock %}

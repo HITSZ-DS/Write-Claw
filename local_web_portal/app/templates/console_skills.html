@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ ui_text('Skills', 'Skills') }} | WriteClaw{% endblock %}
+{% block content %}
+<section class="page-head">
+  <h1>{{ ui_text('Writing Skills', 'Writing Skills') }}</h1>
+  <p>{{ ui_text('每项能力都直接控制 OpenClaw 的工具列表。启用后，LLM 可以在 ReAct 循环中自主调用对应工具。', 'Each capability directly controls the OpenClaw tool list. When enabled, the LLM can autonomously call the corresponding tool during the ReAct loop.') }}</p>
+</section>
+
+{# Stats bar #}
+<section class="status-card-grid" style="margin-bottom: 24px;">
+  <div class="status-metric-card ok">
+    <span>{{ ui_text('Claw 工具总数', 'Claw Tools Total') }}</span>
+    <strong>{{ capability_catalog | selectattr('manager_action') | list | length }}</strong>
+  </div>
+  <div class="status-metric-card ok">
+    <span>{{ ui_text('已启用', 'Enabled') }}</span>
+    <strong>{{ capability_catalog | selectattr('enabled') | list | length }}</strong>
+  </div>
+  <div class="status-metric-card">
+    <span>{{ ui_text('已禁用', 'Disabled') }}</span>
+    <strong>{{ capability_catalog | rejectattr('enabled') | rejectattr('always_enabled') | list | length }}</strong>
+  </div>
+  <div class="status-metric-card">
+    <span>{{ ui_text('核心常开', 'Core Always-On') }}</span>
+    <strong>{{ capability_catalog | selectattr('always_enabled') | list | length }}</strong>
+  </div>
+</section>
+
+{# Group by category #}
+{% set categories = capability_catalog | map(attribute='category') | unique | list %}
+{% for category in categories %}
+  {% set items = capability_catalog | selectattr('category', 'equalto', category) | list %}
+  {% if items %}
+  <section style="margin-bottom: 28px;">
+    <div class="assistant-title" style="margin-bottom: 12px; font-size: 13px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .06em;">{{ category }}</div>
+    <div class="card-stack">
+      {% for item in items %}
+      <article class="list-row-card vertical {% if item.enabled or item.always_enabled %}is-live{% endif %}" style="border-radius: 14px; border: 1px solid {% if item.always_enabled %}rgba(34,197,94,0.4){% elif item.enabled %}rgba(101,88,245,0.3){% else %}#e7ebf1{% endif %}; background: {% if item.always_enabled %}#f0fdf4{% elif item.enabled %}#faf8ff{% else %}#fafafa{% endif %}; padding: 16px 18px; display: grid; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              {% if item.always_enabled %}
+              <span class="skill-badge-core">{{ ui_text('核心常开', 'Core') }}</span>
+              {% elif item.manager_action %}
+              <span class="skill-badge-claw">Claw tool</span>
+              {% else %}
+              <span class="skill-badge-support">Support</span>
+              {% endif %}
+              <h3 style="margin: 0; font-size: 15px; font-weight: 800;">{{ item.name }}</h3>
+            </div>
+            <div class="row-meta">{{ item.slug }}{% if item.manager_action %} · claw_action=<code>{{ item.manager_action }}</code>{% endif %}</div>
+          </div>
+          <div class="row-actions-inline" style="flex-shrink: 0;">
+            {% if item.always_enabled %}
+            <span class="slim-pill" style="background: rgba(34,197,94,0.15); color: #15803d;">{{ ui_text('核心常开', 'Core Always On') }}</span>
+            {% else %}
+            <form method="post" action="/capabilities/{{ item.slug }}/toggle" class="inline-form">
+              <input type="hidden" name="enabled" value="{{ '0' if item.enabled else '1' }}">
+              <button type="submit" class="mini-btn {% if item.enabled %}danger{% else %}primary{% endif %}">
+                {{ ui_text('禁用' if item.enabled else '启用', 'Disable' if item.enabled else 'Enable') }}
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        <div class="assistant-text" style="color: #4a5568;">{{ item.description }}</div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+{% endfor %}
+{% endblock %}
