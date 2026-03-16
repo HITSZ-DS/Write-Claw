@@ -2,62 +2,79 @@
 
 <div align="center">
 
-**Claw-native long-form writing workspace**  
-**面向长篇创作的 Claw 原生写作工作台**
+**A claw-native workspace for long-form AI writing**  
+**一个面向长篇 AI 写作的 Claw 原生工作台**
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Web%20Portal-009688?style=flat-square&logo=fastapi&logoColor=white)
-![Mode](https://img.shields.io/badge/Mode-Write--Claw-111827?style=flat-square)
 ![Runtime](https://img.shields.io/badge/Runtime-Live%20Trace-2563EB?style=flat-square)
-![Language](https://img.shields.io/badge/Language-中文%20%2F%20English-7C3AED?style=flat-square)
+![Interaction](https://img.shields.io/badge/Interaction-Checkpoint%20%26%20Interrupt-7C3AED?style=flat-square)
+![Language](https://img.shields.io/badge/Language-中文%20%2F%20English-111827?style=flat-square)
 
 </div>
 
 ---
 
+## Opening | 开场一句
+
+Write-Claw is built around a simple idea:  
+AI writing should not stop at “prompt in, text out.”
+
+Write-Claw 围绕一个很直接的目标展开：  
+AI 写作不该停留在“输入一句，生成一段”。
+
+It should be able to plan, write, pause, revise, remember, and keep the author inside the loop.  
+它应该能够规划、写作、暂停、修订、记忆，并且始终把作者保留在创作循环里。
+
 ## Overview | 项目简介
 
-`Write-Claw` is a clean, GitHub-ready runtime package focused on the actual Claw writing experience: live orchestration, editable memory, workspace views, chapter checkpoints, and an integrated local web portal.  
-`Write-Claw` 是一个面向 GitHub 整理后的干净运行包，核心聚焦在真正的 Claw 写作体验上：实时调度、可编辑记忆、工作区视图、章节 checkpoint，以及一体化的本地 Web 门户。
+`Write-Claw` is a runtime-focused writing workspace for long-form creation.  
+It combines a local web portal, a Claw-style orchestration loop, editable memory surfaces, chapter checkpoints, and a visible execution trace into one continuous workflow.
 
-Instead of presenting a static shell around a fixed workflow, this repository pushes toward a more interactive writing system where the runtime can think, pause, ask, revise, sync, and continue inside one continuous workspace.  
-它不是套在固定流程外面的静态壳，而是朝着更真实的交互式写作系统推进：运行时可以在一个连续工作区里思考、暂停、提问、修订、同步并继续创作。
+`Write-Claw` 是一个面向长篇创作的运行时写作工作台。  
+它把本地 Web 门户、Claw 风格调度循环、可编辑记忆面板、章节 checkpoint 和可见执行轨迹整合到同一个连续工作流中。
 
-## Why Write-Claw | 为什么是 Write-Claw
+## Why It Gets Attention | 为什么它更容易吸引人
 
-- `Claw-native orchestration`
-  The writing loop is no longer hidden behind a rigid pipeline.
-  `Claw 原生调度`
-  写作循环不再被隐藏在僵硬的固定流程后面。
+Most writing tools show only the output.  
+Write-Claw tries to show the process.
 
-- `Live runtime interaction`
-  Mid-run questions, checkpoints, and interrupts stay on the same page.
-  `实时运行交互`
-  运行中提问、章节检查点和中途打断都留在同一页完成。
+大多数写作工具只展示结果。  
+Write-Claw 更想把“过程”本身做出来。
 
-- `Editable memory and workspace`
-  Character cards, world facts, planning packets, and chapter assets are visible and operable.
-  `可编辑记忆与工作区`
-  角色卡、世界事实、规划包和章节资产都可以直接查看和操作。
+- `Visible runtime`
+  You can see what the system is doing, instead of trusting a black box.
+  `可见运行时`
+  你可以看到系统正在做什么，而不是只能相信一个黑箱。
 
-- `GitHub-clean package`
-  This repo is suitable as a standalone shareable runtime surface.
-  `干净的 GitHub 包`
-  这个仓库适合作为独立、可共享的运行时项目表面。
+- `Interruptible flow`
+  You can stop, steer, and adjust direction while the writing is still happening.
+  `可打断流程`
+  你可以在写作进行中随时打断、改向、继续推进。
+
+- `Checkpoint-driven chapters`
+  Each chapter can become a decision point, not just a generated artifact.
+  `章节式 checkpoint`
+  每一章都可以成为一个决策节点，而不只是生成产物。
+
+- `Memory-first collaboration`
+  Character state, world state, notes, and planning can accumulate over time.
+  `记忆优先的协作写作`
+  角色状态、世界状态、笔记与规划会在写作过程中持续积累。
 
 ## Core Experience | 核心体验
 
 | Module | English | 中文 |
 | --- | --- | --- |
-| Runtime Loop | Dynamic Claw loop with live tool trace, chapter decisions, and visible execution flow. | 动态 Claw 循环，提供实时工具轨迹、章节决策和可见执行流程。 |
-| Writing Console | A multi-view console for chat, run progress, checkpoints, and manuscript work. | 多视图写作控制台，整合对话、运行进度、checkpoint 和稿件工作区。 |
-| Memory Surface | Bilingual panels for memory banks, world state, character state, and revision notes. | 双语记忆面板，覆盖记忆库、世界状态、角色状态与修订笔记。 |
-| Workspace Tools | Planning, sync, retrieval, revision, and manuscript operations in one surface. | 在统一界面中完成规划、同步、检索、修订和稿件操作。 |
+| Runtime Loop | Dynamic Claw loop with live action trace and visible step flow. | 动态 Claw 循环，提供实时动作轨迹和可见步骤流。 |
+| Writing Console | A unified surface for chat, progress, checkpoints, and manuscript work. | 统一界面整合对话、进度、checkpoint 和稿件工作区。 |
+| Memory Surface | Editable panels for memory banks, character state, world facts, and revision notes. | 可编辑的记忆面板，覆盖记忆库、角色状态、世界事实和修订笔记。 |
+| Workspace Tools | Planning, sync, retrieval, revision, and chapter operations in one place. | 在一个界面中完成规划、同步、检索、修订和章节操作。 |
 
 ## Interface Preview | 界面预览
 
-Below is a screenshot gallery from the current Write-Claw interface.  
-下面是当前 Write-Claw 界面的截图画廊。
+These screenshots show the current Write-Claw interface in action.  
+下面这些截图展示了当前 Write-Claw 的实际界面效果。
 
 ### Runtime Flow | 运行流程
 
@@ -135,7 +152,7 @@ Below is a screenshot gallery from the current Write-Claw interface.
   </tr>
 </table>
 
-### Extended Console Views | 扩展控制台视图
+### Extended Views | 扩展视图
 
 <table>
   <tr>
@@ -153,6 +170,17 @@ Below is a screenshot gallery from the current Write-Claw interface.
     </td>
   </tr>
 </table>
+
+## Who Is This For | 这适合谁
+
+Write-Claw is especially interesting for:
+
+- writers who want chapter-level control instead of one-shot generation  
+  想要章节级控制，而不是一次性生成的作者
+- developers exploring agents, memory systems, tools, and runtime interaction  
+  正在探索 agent、记忆系统、工具调用和运行时交互的开发者
+- researchers interested in long-form writing, orchestration, and human-in-the-loop systems  
+  关注长文本写作、任务编排和 human-in-the-loop 系统的研究者
 
 ## Quick Start | 快速开始
 
@@ -201,33 +229,13 @@ Write-Claw/
 └─ requirements.txt
 ```
 
-## Clean Package Notes | 干净包说明
+## Project Role | 项目定位
 
-This repository is intentionally kept cleaner than the original working directory.  
-这个仓库是按“比原始工作目录更干净”的标准整理的。
+You can understand this repository as:
 
-Excluded from versioned runtime state:
-- Local databases
-- Generated runs and logs
-- Vector store data
-- Session secrets and encryption keys
-- Virtual environments and caches
-
-被排除在版本化运行状态之外的内容包括：
-- 本地数据库
-- 运行产物与日志
-- 向量库存储数据
-- 会话密钥与加密密钥
-- 虚拟环境与缓存
-
-## Positioning | 仓库定位
-
-Use this repository as:
-- A standalone runtime repo for Write-Claw
-- A cleaner deployment surface for local or private hosting
-- A shareable bilingual project page for the Claw writing experience
-
-你可以把这个仓库当作：
-- Write-Claw 的独立运行仓库
-- 更干净的本地或私有部署表面
-- 一个可展示 Claw 写作体验的双语项目主页
+- a standalone runtime repo for the Write-Claw experience  
+  一个可独立运行的 Write-Claw 仓库
+- a visual project surface for showing how Claw can work in writing  
+  一个展示 Claw 如何进入写作场景的项目表面
+- a foundation for future work on MCP, skills, memory, and long-form agentic creation  
+  一个继续拓展 MCP、skills、记忆系统和长篇 agent 创作的基础项目
