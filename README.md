@@ -19,6 +19,7 @@
 
 - [Installation](#installation)
 - [Integrations](#integrations)
+- [Plugin Usage](#plugin-usage)
 - [Releases](#releases)
 - [Repository Layout](#repository-layout)
 
@@ -228,6 +229,39 @@ Use the host package directly when you mainly need:
 - host-specific installation structure
 
 Add MCP later only if you want a shared tool-calling layer for runtime control, memory access, or chapter synchronization.
+
+<a id="plugin-usage"></a>
+
+## Plugin Usage | 插件使用方法
+
+### Claude plugin bundle
+
+1. Download `write-claw-claude-plugin.zip` from Releases or use `integrations/claude-plugin-bundle`.
+2. Unzip it into the repository or workspace where you want Claude-compatible plugin assets.
+3. Keep the `.claude-plugin` directory structure unchanged.
+4. Start with the plugin entry and `prompts/session-kickoff.md` to initialize a new writing project.
+5. Use the bundled agents and skill for chapter planning, memory maintenance, and revision flow.
+
+### Codex skill bundle
+
+1. Download `write-claw-codex-skill.zip` from Releases or use `integrations/codex-skill-bundle`.
+2. Copy `AGENTS.md`, `.codex/skills/write-claw-runtime`, and `templates/` into the target repository.
+3. Let Codex read the workspace `AGENTS.md` so the `write-claw-runtime` skill becomes available.
+4. Use the provided templates to build a story brief, chapter checkpoint, and memory notes before drafting.
+5. Keep canon updates and continuity fixes explicit between chapters.
+
+### Do you need MCP
+
+No. MCP is optional here.
+
+Use these bundles directly when you mainly need:
+
+- reusable prompts
+- host-specific plugin or skill structure
+- chapter workflow guidance
+- memory and continuity conventions
+
+Add MCP later only if you need standard tool calls for runtime control, memory access, or chapter synchronization.
 
 <a id="releases"></a>
 
