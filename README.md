@@ -9,19 +9,31 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-Web%20Portal-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![Runtime](https://img.shields.io/badge/Runtime-Live%20Trace-2563EB?style=flat-square)
 ![Interaction](https://img.shields.io/badge/Interaction-Checkpoint%20%26%20Interrupt-7C3AED?style=flat-square)
-![Language](https://img.shields.io/badge/Language-中文%20%2F%20English-111827?style=flat-square)
+![Language](https://img.shields.io/badge/Language-Chinese%20%2F%20English-111827?style=flat-square)
 
 </div>
 
 ---
 
-## Opening | 开场一句
+## Navigation
 
-Write-Claw is built around a simple idea:  
-AI writing should not stop at “prompt in, text out.”
+- [Installation](#installation)
+- [Integrations](#integrations)
+- [Releases](#releases)
+- [Repository Layout](#repository-layout)
 
-Write-Claw 围绕一个很直接的目标展开：  
-AI 写作不该停留在“输入一句，生成一段”。
+Quick links:
+
+- [Local startup](./local_web_portal/start_local.ps1)
+- [Claude package source](./integrations/claude-plugin-bundle)
+- [Codex package source](./integrations/codex-skill-bundle)
+- [Claude release zip](./release/write-claw-claude-plugin.zip)
+- [Codex release zip](./release/write-claw-codex-skill.zip)
+
+## Opening | 开场一句话
+
+Write-Claw is built around a simple idea: AI writing should not stop at "prompt in, text out."  
+Write-Claw 围绕一个很直接的目标展开：AI 写作不该停留在“输入一句话，生成一段”。
 
 It should be able to plan, write, pause, revise, remember, and keep the author inside the loop.  
 它应该能够规划、写作、暂停、修订、记忆，并且始终把作者保留在创作循环里。
@@ -34,7 +46,7 @@ It combines a local web portal, a Claw-style orchestration loop, editable memory
 `Write-Claw` 是一个面向长篇创作的运行时写作工作台。  
 它把本地 Web 门户、Claw 风格调度循环、可编辑记忆面板、章节 checkpoint 和可见执行轨迹整合到同一个连续工作流中。
 
-## Why It Gets Attention | 为什么它更容易吸引人
+## Why It Gets Attention | 为什么它容易被关注
 
 Most writing tools show only the output.  
 Write-Claw tries to show the process.
@@ -43,24 +55,13 @@ Write-Claw tries to show the process.
 Write-Claw 更想把“过程”本身做出来。
 
 - `Visible runtime`
-  You can see what the system is doing, instead of trusting a black box.
-  `可见运行时`
-  你可以看到系统正在做什么，而不是只能相信一个黑箱。
-
+  You can see what the system is doing instead of trusting a black box.
 - `Interruptible flow`
   You can stop, steer, and adjust direction while the writing is still happening.
-  `可打断流程`
-  你可以在写作进行中随时打断、改向、继续推进。
-
 - `Checkpoint-driven chapters`
   Each chapter can become a decision point, not just a generated artifact.
-  `章节式 checkpoint`
-  每一章都可以成为一个决策节点，而不只是生成产物。
-
 - `Memory-first collaboration`
   Character state, world state, notes, and planning can accumulate over time.
-  `记忆优先的协作写作`
-  角色状态、世界状态、笔记与规划会在写作过程中持续积累。
 
 ## Core Experience | 核心体验
 
@@ -95,7 +96,7 @@ These screenshots show the current Write-Claw interface in action.
   </tr>
 </table>
 
-### Workspace & Assets | 工作区与资产
+### Workspace and Assets | 工作区与资产
 
 <table>
   <tr>
@@ -114,7 +115,7 @@ These screenshots show the current Write-Claw interface in action.
   </tr>
 </table>
 
-### Memory & Editing | 记忆与编辑
+### Memory and Editing | 记忆与编辑
 
 <table>
   <tr>
@@ -171,18 +172,17 @@ These screenshots show the current Write-Claw interface in action.
   </tr>
 </table>
 
-## Who Is This For | 这适合谁
+## Who Is This For | 适合谁
 
 Write-Claw is especially interesting for:
 
-- writers who want chapter-level control instead of one-shot generation  
-  想要章节级控制，而不是一次性生成的作者
-- developers exploring agents, memory systems, tools, and runtime interaction  
-  正在探索 agent、记忆系统、工具调用和运行时交互的开发者
-- researchers interested in long-form writing, orchestration, and human-in-the-loop systems  
-  关注长文本写作、任务编排和 human-in-the-loop 系统的研究者
+- writers who want chapter-level control instead of one-shot generation
+- developers exploring agents, memory systems, tools, and runtime interaction
+- researchers interested in long-form writing, orchestration, and human-in-the-loop systems
 
-## Quick Start | 快速开始
+<a id="installation"></a>
+
+## Installation | 安装与启动
 
 ### 1. Run locally | 本地启动
 
@@ -191,8 +191,7 @@ cd Write-Claw
 .\local_web_portal\start_local.ps1
 ```
 
-Open in browser:  
-浏览器访问：
+Open in browser:
 
 ```text
 http://127.0.0.1:8010
@@ -205,24 +204,59 @@ Copy-Item local_web_portal\.env.example local_web_portal\.env
 ```
 
 Fill in your own provider keys and local settings.  
-填写你自己的 provider 密钥和本地配置。
+Do **not** commit `local_web_portal\.env`.
 
-Do **not** commit `local_web_portal\.env`.  
-不要提交 `local_web_portal\.env`。
+<a id="integrations"></a>
 
-## Repository Layout | 仓库结构
+## Integrations | Claude 与 Codex 插件包
+
+This repository now also includes two host-specific packaging modes for reuse:
+
+- `integrations/claude-plugin-bundle`
+  A Claude-oriented plugin package using a `.claude-plugin` layout.
+- `integrations/codex-skill-bundle`
+  A Codex-oriented skill package using `AGENTS.md` and `.codex/skills`.
+
+These packaging modes are meant for distribution and reuse.  
+They do **not** make MCP mandatory.
+
+Use the host package directly when you mainly need:
+
+- workflow prompts
+- writing agents or skills
+- reusable templates
+- host-specific installation structure
+
+Add MCP later only if you want a shared tool-calling layer for runtime control, memory access, or chapter synchronization.
+
+<a id="releases"></a>
+
+## Releases | Release 打包
+
+Prepacked release artifacts for the two plugin modes are available in:
+
+- `release/write-claw-claude-plugin.zip`
+- `release/write-claw-codex-skill.zip`
+
+If you want to publish GitHub Releases later, these two zip files are the recommended upload assets.
+
+<a id="repository-layout"></a>
+
+## Repository Layout
 
 ```text
 Write-Claw/
-├─ agents/                # agent implementations | Agent 实现
-├─ rag/                   # memory and retrieval | 记忆与检索
-├─ utils/                 # shared helpers | 通用工具
-├─ workflow/              # orchestration and execution | 编排与执行
+├─ agents/                # agent implementations
+├─ rag/                   # memory and retrieval
+├─ utils/                 # shared helpers
+├─ workflow/              # orchestration and execution
 ├─ local_web_portal/
-│  ├─ app/                # FastAPI web application | Web 应用
-│  ├─ start_local.ps1     # local startup script | 本地启动脚本
-│  └─ .env.example        # environment template | 环境模板
-├─ png/                   # README screenshots | README 截图资源
+│  ├─ app/                # FastAPI web application
+│  ├─ start_local.ps1     # local startup script
+│  └─ .env.example        # environment template
+├─ integrations/          # Claude / Codex reusable packages
+├─ release/               # packaged release zip assets
+├─ png/                   # README screenshots
 ├─ main.py
 ├─ config.py
 ├─ capability_registry.py
@@ -233,9 +267,6 @@ Write-Claw/
 
 You can understand this repository as:
 
-- a standalone runtime repo for the Write-Claw experience  
-  一个可独立运行的 Write-Claw 仓库
-- a visual project surface for showing how Claw can work in writing  
-  一个展示 Claw 如何进入写作场景的项目表面
-- a foundation for future work on MCP, skills, memory, and long-form agentic creation  
-  一个继续拓展 MCP、skills、记忆系统和长篇 agent 创作的基础项目
+- a standalone runtime repo for the Write-Claw experience
+- a visual project surface for showing how Claw can work in writing
+- a foundation for future work on MCP, skills, memory, and long-form agentic creation

@@ -1,0 +1,16 @@
+{
+  "id": "write-claw-studio",
+  "name": "Write-Claw Studio",
+  "version": "0.1.0",
+  "description": "A reusable long-form writing plugin scaffold for Claude hosts inspired by Write-Claw.",
+  "skills": [
+    "skills/story-runtime/SKILL.md"
+  ],
+  "agents": [
+    "agents/runtime-orchestrator.md",
+    "agents/memory-editor.md"
+  ],
+  "prompts": [
+    "prompts/session-kickoff.md"
+  ]
+}

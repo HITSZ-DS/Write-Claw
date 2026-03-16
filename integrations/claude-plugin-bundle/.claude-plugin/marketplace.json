@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "plugins": [
+    {
+      "id": "write-claw-studio",
+      "name": "Write-Claw Studio",
+      "description": "Long-form writing workflow with dynamic memory, chapter checkpoints, and collaborative ideation.",
+      "path": "plugins/write-claw-studio",
+      "entry": "plugins/write-claw-studio/plugin.md",
+      "metadata": "plugins/write-claw-studio/metadata.json"
+    }
+  ]
+}
