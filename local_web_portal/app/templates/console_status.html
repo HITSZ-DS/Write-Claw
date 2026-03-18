@@ -80,6 +80,9 @@
       </div>
       <span class="mini-badge">{{ model_overview.providers|length }}</span>
     </div>
+    {% if modelless_mode %}
+    <div class="empty-note">{{ modelless_notice }}</div>
+    {% endif %}
     <div class="status-provider-list">
       {% for provider in model_overview.providers %}
       <article class="status-provider-card">

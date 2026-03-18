@@ -244,7 +244,9 @@
             <div class="chat-run-passive-note">{{ ui_text('运行中的提问、中途打断、章节续写都留在这一页完成。', 'Runtime questions, interrupts, and chapter continuation all stay on this page.') }}</div>
             {% else %}
             <form method="post" action="/idea-copilot/start" class="chat-input-form chat-input-form--floating" id="new-session-form">
-              {% if providers %}
+              {% if modelless_mode %}
+              <div class="empty-note">{{ modelless_notice }}</div>
+              {% elif providers %}
               <div class="chat-input-topline">
                 <label class="muted" for="provider-select">{{ ui_text('模型', 'Provider') }}</label>
                 <select id="provider-select" name="provider" required>

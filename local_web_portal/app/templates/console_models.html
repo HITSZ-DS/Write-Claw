@@ -12,6 +12,9 @@
       <h3>{{ ui_texts.models_heading_providers }}</h3>
       <span class="mini-badge">{{ model_overview.providers|length }}</span>
     </div>
+    {% if modelless_mode %}
+    <div class="empty-note">{{ modelless_notice }}</div>
+    {% endif %}
     <div class="file-list">
       {% for item in model_overview.providers %}
       <div class="file-item vertical">
@@ -34,6 +37,7 @@
     </div>
   </article>
 
+  {% if not modelless_mode %}
   <article class="workspace-panel">
     <div class="panel-head">
       <h3>{{ ui_texts.models_save_api_key }}</h3>
@@ -67,5 +71,6 @@
       <button type="submit" class="primary-btn">{{ ui_texts.models_save_provider }}</button>
     </form>
   </article>
+  {% endif %}
 </section>
 {% endblock %}

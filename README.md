@@ -18,6 +18,7 @@
 ## Navigation
 
 - [Installation](#installation)
+- [Deployment](#deployment)
 - [Integrations](#integrations)
 - [Plugin Usage](#plugin-usage)
 - [Releases](#releases)
@@ -26,6 +27,8 @@
 Quick links:
 
 - [Local startup](./local_web_portal/start_local.ps1)
+- [Portal deployment notes](./local_web_portal/README.md)
+- [Minimal GitHub whitelist](./EXPORT_WHITELIST.md)
 - [Claude package source](./integrations/claude-plugin-bundle)
 - [Codex package source](./integrations/codex-skill-bundle)
 - [Claude release zip](./release/write-claw-claude-plugin.zip)
@@ -206,6 +209,67 @@ Copy-Item local_web_portal\.env.example local_web_portal\.env
 
 Fill in your own provider keys and local settings.  
 Do **not** commit `local_web_portal\.env`.
+
+<a id="deployment"></a>
+
+## Deployment | Local and Server
+
+### 1. Local portal deployment
+
+The fastest way to deploy the local web portal is the bundled startup script:
+
+```powershell
+cd Write-Claw
+.\local_web_portal\start_local.ps1
+```
+
+What this script does:
+
+- creates `.venv` if missing
+- installs root and portal requirements
+- creates `local_web_portal\.env` from `.env.example` if missing
+- starts `uvicorn` on `127.0.0.1:8010`
+
+Default export behavior:
+
+- `WEB_MODELLESS_MODE=1`
+- `DISABLE_EMBEDDING_DOWNLOADS=1`
+- the portal boots in model-free workspace mode
+- startup, login, workspace browsing, and local state management do not require any provider, API key, or model
+- portal startup and web-worker runs do not download HuggingFace RAG embedding models
+- model-driven generation stays disabled until you explicitly set `WEB_MODELLESS_MODE=0`
+- GitHub export follows a minimal whitelist and excludes local runtime state such as `runs/`, `vector_db/`, and `local_web_portal/data/`
+
+Open:
+
+```text
+http://127.0.0.1:8010
+```
+
+If you want generation jobs to run without timeout cutoffs, keep these in `local_web_portal\.env`:
+
+```text
+WEB_JOB_TIMEOUT_SECONDS=0
+WEB_JOB_IDLE_TIMEOUT_SECONDS=0
+LLM_TIMEOUT_SECONDS=0
+```
+
+### 2. Server deployment
+
+Use a reverse proxy such as Nginx or Caddy in front of the app. Minimal startup command:
+
+```bash
+uvicorn local_web_portal.app.main:app --host 0.0.0.0 --port 8010 --workers 2
+```
+
+Recommended production environment variables:
+
+- `APP_SESSION_SECRET`
+- `APP_ENCRYPTION_KEY`
+- `APP_HTTPS_ONLY=1`
+
+For multi-user production deployment, switch the database to PostgreSQL via `APP_DATABASE_URL`.
+Full portal-specific deployment notes are in `local_web_portal/README.md`.
 
 <a id="integrations"></a>
 

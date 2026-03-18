@@ -38,7 +38,35 @@ Copy-Item local_web_portal\.env.example local_web_portal\.env
 You can leave `APP_SESSION_SECRET` and `APP_ENCRYPTION_KEY` empty for local testing.
 The app will auto-create fallback secrets in `local_web_portal/data/`.
 
+By default, the exported portal starts in model-free workspace mode:
+
+```text
+WEB_MODELLESS_MODE=1
+DISABLE_EMBEDDING_DOWNLOADS=1
+```
+
+In this mode, the portal can boot, log in, browse workspace data, and manage local state without requiring any provider, API key, or model.
+It also blocks HuggingFace embedding downloads for RAG during portal startup and web-worker runs.
+If you later want to enable real generation, set `WEB_MODELLESS_MODE=0` and then configure providers.
+
+For GitHub export, keep only source files in the repo and exclude runtime state:
+
+- exclude `local_web_portal/data/`
+- exclude `local_web_portal/runs/`
+- exclude top-level `runs/`
+- exclude top-level `vector_db/`
+
 ## 3) Start locally
+
+Recommended wrapper script:
+
+```powershell
+.\local_web_portal\start_local.ps1
+```
+
+This script bootstraps `.venv`, installs dependencies, creates `local_web_portal\.env` if needed, and starts the portal on `127.0.0.1:8010`.
+
+Equivalent manual command:
 
 ```powershell
 python -m uvicorn local_web_portal.app.main:app --host 127.0.0.1 --port 8010

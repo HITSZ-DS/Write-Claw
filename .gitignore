@@ -23,17 +23,10 @@ local_web_portal/.venv/
 
 local_web_portal/.env
 
-runs/*
-!runs/.gitkeep
-
-vector_db/*
-!vector_db/.gitkeep
-
-local_web_portal/data/*
-!local_web_portal/data/.gitkeep
-
-local_web_portal/runs/*
-!local_web_portal/runs/.gitkeep
+runs/
+vector_db/
+local_web_portal/data/
+local_web_portal/runs/
 
 *.log
 *.tmp

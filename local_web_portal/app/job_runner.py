@@ -158,12 +158,15 @@ def _provider_env(
         "EVAL_INTERVAL": str(settings.eval_interval),
         "LLM_TIMEOUT_SECONDS": os.getenv("LLM_TIMEOUT_SECONDS", "0"),
         "LLM_MAX_RETRIES": os.getenv("LLM_MAX_RETRIES", "1"),
-        # Keep default behavior close to original pipeline (full-rag).
-        "MEMORY_ONLY_MODE": os.getenv("WEB_MEMORY_ONLY_MODE", "1"),
-        "ENABLE_RAG": os.getenv("WEB_ENABLE_RAG", "0"),
-        "ENABLE_STATIC_KB": os.getenv("WEB_ENABLE_STATIC_KB", "0"),
+        # Web portal workers must not trigger HuggingFace embedding downloads.
+        "MEMORY_ONLY_MODE": "1",
+        "ENABLE_RAG": "0",
+        "ENABLE_STATIC_KB": "0",
         "ENABLE_EVALUATOR": os.getenv("WEB_ENABLE_EVALUATOR", "1"),
-        "EMBEDDING_MODEL": os.getenv("WEB_EMBEDDING_MODEL", "none"),
+        "EMBEDDING_MODEL": "none",
+        "DISABLE_EMBEDDING_DOWNLOADS": "1",
+        "HF_HUB_OFFLINE": "1",
+        "TRANSFORMERS_OFFLINE": "1",
         # Force UTF-8 output from worker process on Windows to avoid mojibake.
         "PYTHONUTF8": "1",
         "PYTHONIOENCODING": "utf-8",

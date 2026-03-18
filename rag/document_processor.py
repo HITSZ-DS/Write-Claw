@@ -27,6 +27,17 @@ os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
 os.environ.setdefault("TRANSFORMERS_NO_FLAX", "1")
 os.environ.setdefault("USE_TF", "0")
 
+
+def _embedding_downloads_disabled() -> bool:
+    raw = str(os.getenv("DISABLE_EMBEDDING_DOWNLOADS", "1") or "1").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+if _embedding_downloads_disabled():
+    # Make accidental HuggingFace embedding initialization stay offline by default.
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
 import numpy as np
 
 
@@ -41,7 +52,9 @@ class DocumentProcessor:
             length_function=len,
         )
         embed_name = (config.embedding_model or "").strip().lower()
-        if embed_name in {"", "none", "noop", "disable", "disabled"}:
+        if _embedding_downloads_disabled():
+            self.embedding_model = None
+        elif embed_name in {"", "none", "noop", "disable", "disabled"}:
             self.embedding_model = None
         else:
             try:

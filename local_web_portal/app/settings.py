@@ -62,6 +62,7 @@ class Settings:
     app_name: str = "Long Story Portal"
     database_url: str = _resolve_database_url()
     https_only: bool = os.getenv("APP_HTTPS_ONLY", "0") == "1"
+    modelless_mode: bool = os.getenv("WEB_MODELLESS_MODE", "1") == "1"
     default_provider: str = os.getenv("WEB_DEFAULT_PROVIDER", "deepseek").lower()
     ui_language: str = os.getenv("WEB_UI_LANGUAGE", "en").lower()
     max_iterations: int = int(os.getenv("WEB_MAX_ITERATIONS", "8"))

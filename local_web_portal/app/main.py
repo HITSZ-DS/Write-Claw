@@ -339,6 +339,18 @@ def _console_texts(lang: str) -> Dict[str, str]:
     }
 
 
+def _modelless_mode_enabled() -> bool:
+    return bool(getattr(settings, "modelless_mode", False))
+
+
+def _modelless_notice(lang: str) -> str:
+    return _ui_text(
+        lang,
+        "当前部署以无模型工作台模式运行。门户可以正常启动、登录、查看工作区和管理本地状态，但不会触发任何需要 provider、API Key 或 model 的流程。若你之后要启用生成，再把 local_web_portal/.env 里的 WEB_MODELLESS_MODE 改为 0。",
+        "This deployment is running in model-free workspace mode. The portal can start, log in, browse the workspace, and manage local state without triggering any provider, API key, or model-dependent flow. If you later want generation, set WEB_MODELLESS_MODE=0 in local_web_portal/.env.",
+    )
+
+
 
 
 
@@ -466,6 +478,18 @@ def _redirect_with_notice(path: str, *, message: str = "", error: str = "") -> R
     return _redirect(path)
 
 
+def _reject_when_modelless(
+    request: Request,
+    *,
+    path: str = "/console/chat",
+    fetch_status: int = 409,
+) -> RedirectResponse | JSONResponse:
+    message = _modelless_notice(_ui_language(request))
+    if request.headers.get("x-requested-with") == "fetch":
+        return JSONResponse({"ok": False, "error": message}, status_code=fetch_status)
+    return _redirect_with_notice(path, error=message)
+
+
 def _mask_hint(raw: str) -> str:
     if len(raw) < 8:
         return "********"
@@ -567,6 +591,8 @@ def _custom_provider_specs_for_user(db: Session, user_id: int) -> Dict[str, Prov
 
 
 def _provider_specs_for_user(db: Session, user_id: int) -> Dict[str, ProviderSpec]:
+    if _modelless_mode_enabled():
+        return {}
     base_specs = get_provider_specs(settings)
     custom_specs = _custom_provider_specs_for_user(db, user_id)
     return merge_provider_specs(base_specs, custom_specs.values(), allow_override=False)
@@ -719,6 +745,10 @@ def _memory_topic_hint(index: Dict, fallback: str = "global") -> str:
 def _portal_memory_system() -> MemorySystem:
     cfg = Config(require_api_key=False)
     cfg.language = settings.ui_language if settings.ui_language in {"en", "zh"} else "en"
+    cfg.memory_only_mode = True
+    cfg.enable_rag = False
+    cfg.enable_static_kb = False
+    cfg.embedding_model = "none"
     return MemorySystem(cfg)
 
 
@@ -1607,7 +1637,11 @@ def _build_model_overview(
                 "is_custom": any((row.slug or "") == slug for row in custom_providers),
             }
         )
-    return {"providers": providers}
+    return {
+        "providers": providers,
+        "modelless_mode": _modelless_mode_enabled(),
+        "notice": _modelless_notice(language) if _modelless_mode_enabled() else "",
+    }
 
 
 
@@ -1706,10 +1740,15 @@ def _console_context(request: Request, db: Session, user: User, active_nav: str)
     mcp_surface = _build_mcp_surface(capability_catalog, len(provider_list), memory_bank_cards, ui_language)
     env_overview = _build_env_overview()
     status_summary = {
-        "api_health": ui_text("正常", "healthy") if provider_list else ui_text("未配置", "not configured"),
+        "api_health": (
+            ui_text("无模型模式", "model-free mode")
+            if _modelless_mode_enabled()
+            else (ui_text("正常", "healthy") if provider_list else ui_text("未配置", "not configured"))
+        ),
         "agent_mode": settings.execution_mode,
         "running_jobs": len([job for job in jobs if job.status == "running"]),
         "tool_count": len([key for key, value in memory_overview.get("claw_counts", {}).items() if value]),
+        "active_sessions": len([session for session in idea_sessions if session.status not in {"canceled", "deleted"}]),
         "session_label": (
             f"#{chat_session.id}" if chat_session else ui_text("未选择", "None selected")
         ),
@@ -1745,6 +1784,8 @@ def _console_context(request: Request, db: Session, user: User, active_nav: str)
         "providers": provider_list,
         "provider_specs": provider_specs,
         "custom_providers": custom_providers,
+        "modelless_mode": _modelless_mode_enabled(),
+        "modelless_notice": _modelless_notice(ui_language) if _modelless_mode_enabled() else "",
         "default_provider": settings.default_provider if settings.default_provider in provider_specs else (provider_list[0] if provider_list else ""),
         "workspace_files": workspace_files,
         "memory_overview": memory_overview,
@@ -3511,6 +3552,8 @@ def save_api_key(
     user = _current_user(request, db)
     if not user:
         return _redirect("/login")
+    if _modelless_mode_enabled():
+        return _reject_when_modelless(request, path="/console/models")
 
     language = _ui_language(request)
     provider = provider.strip().lower()
@@ -3560,6 +3603,8 @@ def save_provider_config(
     user = _current_user(request, db)
     if not user:
         return _redirect("/login")
+    if _modelless_mode_enabled():
+        return _reject_when_modelless(request, path="/console/models")
 
     language = _ui_language(request)
     norm_slug = normalize_slug(slug)
@@ -3623,6 +3668,8 @@ def delete_provider_config(slug: str, request: Request, db: Session = Depends(ge
     user = _current_user(request, db)
     if not user:
         return _redirect("/login")
+    if _modelless_mode_enabled():
+        return _reject_when_modelless(request, path="/console/models")
 
     language = _ui_language(request)
     norm_slug = normalize_slug(slug)
@@ -3660,6 +3707,8 @@ def start_idea_copilot(
     user = _current_user(request, db)
     if not user:
         return _redirect("/login")
+    if _modelless_mode_enabled():
+        return _reject_when_modelless(request, path="/console/chat")
 
     idea = idea.strip()
     provider = provider.strip().lower()
@@ -3767,6 +3816,8 @@ def idea_copilot_reply(
     user = _current_user(request, db)
     if not user:
         return _redirect("/login")
+    if _modelless_mode_enabled():
+        return _reject_when_modelless(request, path=f"/console/chat?session_id={session_id}")
 
     session = db.get(IdeaCopilotSession, session_id)
     if not session or session.user_id != user.id:
@@ -3871,6 +3922,8 @@ def idea_copilot_confirm(session_id: int, request: Request, db: Session = Depend
     user = _current_user(request, db)
     if not user:
         return _redirect("/login")
+    if _modelless_mode_enabled():
+        return _reject_when_modelless(request, path=f"/console/chat?session_id={session_id}")
 
     session = db.get(IdeaCopilotSession, session_id)
     if not session or session.user_id != user.id:
@@ -3958,6 +4011,8 @@ def create_job(
     user = _current_user(request, db)
     if not user:
         return _redirect("/login")
+    if _modelless_mode_enabled():
+        return _reject_when_modelless(request, path="/console/chat")
 
     idea = idea.strip()
     provider = provider.strip().lower()
